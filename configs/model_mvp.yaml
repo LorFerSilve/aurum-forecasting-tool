@@ -1,0 +1,23 @@
+schema_version: 1
+release_version: v0.1.0
+class_order:
+  - down
+  - neutral
+  - up
+
+logistic:
+  c_values:
+    - 0.1
+    - 1.0
+    - 10.0
+  class_weight_options:
+    - none
+    - balanced
+  max_iter: 2000
+  selection_primary: macro_f1
+  selection_tiebreak: log_loss
+  final_fit: train_only
+
+evaluation:
+  reliability_buckets: 10
+  probability_status: preliminary

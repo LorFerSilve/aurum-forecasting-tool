@@ -1,0 +1,31 @@
+schema_version: 1
+
+instrument:
+  id: XAU_USD
+  display_name: XAU/USD spot reference
+  base_asset: XAU
+  quote_currency: USD
+  price_unit: USD_per_troy_ounce
+  market_type: otc_spot_reference
+
+provider:
+  id: histdata
+  adapter: histdata_ascii_m1
+  source_symbol: XAUUSD
+  source_url: https://www.histdata.com/download-free-forex-data/
+  source_timezone_offset: "-05:00"
+  source_observes_dst: false
+  timestamp_semantics: candle_open
+  price_side: bid
+  volume_reliable: false
+  market_hours_policy: observed_source_rows
+
+data:
+  raw_timeframe: 1min
+  derived_timeframes:
+    - 3min
+    - 15min
+  normalized_timezone: UTC
+  require_complete_candles: true
+  interpolate_gaps: false
+

@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+.venv/
+
+# Secrets and local settings
+.env
+*.local.yaml
+
+# Data and generated artifacts
+data/raw/**
+data/curated/**
+data/features/**
+data/labels/**
+data/model_tables/**
+data/oof_predictions/**
+models/**
+reports/runs/**
+reports/data/*.parquet
+
+# Keep directory documentation/placeholders
+!data/**/.gitkeep
+!data/README.md
+!models/.gitkeep
+!reports/.gitkeep
+
+# Editors and OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

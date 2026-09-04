@@ -1,0 +1,24 @@
+schema_version: 1
+
+cost_model:
+  name: histdata_bid_only_mvp_v1
+  unit: basis_points
+  source_price_side: bid
+  estimated_spread_round_trip_bps: 3.0
+  slippage_per_side_bps: 0.5
+  commission_round_trip_bps: 0.0
+  financing_round_trip_bps: 0.0
+  total_round_trip_bps: 4.0
+  normalized_notional: 1.0
+  leverage: 1.0
+
+stress_model:
+  spread_multiplier: 1.5
+  slippage_per_side_bps: 0.5
+  total_round_trip_bps: 5.5
+
+reporting:
+  include_gross_return: true
+  include_net_return: true
+  include_cost_breakdown: true
+

@@ -1,0 +1,33 @@
+{
+  "dataset_version": "sha256:b5f7463b066e3c1d86408441c8cbce62f165a4a99867154daa2f5baa84d2963f",
+  "gap_count_1min": 2220,
+  "gap_report": "reports/data/mvp_gaps_1min.parquet",
+  "instrument": "XAU_USD",
+  "missing_candles_1min": 902789,
+  "schema_version": 1,
+  "source": "histdata",
+  "timeframes": {
+    "15min": {
+      "end": "2024-12-31T21:45:00Z",
+      "rows": 114762,
+      "start": "2020-01-01T23:00:00Z"
+    },
+    "1min": {
+      "end": "2024-12-31T21:58:00Z",
+      "rows": 1726589,
+      "start": "2020-01-01T23:00:00Z"
+    },
+    "3min": {
+      "end": "2024-12-31T21:57:00Z",
+      "rows": 575254,
+      "start": "2020-01-01T23:00:00Z"
+    }
+  },
+  "years": [
+    2020,
+    2021,
+    2022,
+    2023,
+    2024
+  ]
+}

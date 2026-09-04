@@ -1,0 +1,16 @@
+schema_version: 1
+
+input_timeframe: 3min
+return_lags:
+  - 1
+  - 2
+  - 3
+momentum_windows:
+  - 5
+  - 20
+realized_volatility_window: 20
+moving_average_windows:
+  - 5
+  - 20
+zero_range_close_position: 0.5
+tick_count_enabled: false

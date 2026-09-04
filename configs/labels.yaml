@@ -1,0 +1,35 @@
+schema_version: 1
+
+prediction:
+  cadence: 3min
+  alignment_timezone: UTC
+  feature_cutoff_rule: closed_candles_only
+  decision_latency_minutes: 1
+  entry_rule: next_1min_open_after_latency
+  primary_horizon_minutes: 15
+  exit_rule: first_1min_open_at_horizon
+
+return:
+  type: log_return
+  unit: basis_points
+  price_side: bid
+  formula: 10000 * ln(exit_bid_open / entry_bid_open)
+
+classes:
+  names:
+    - down
+    - neutral
+    - up
+  estimated_cost_buffer_bps: 4.0
+  noise_buffer_bps: 2.0
+  total_threshold_bps: 6.0
+  up_rule: gross_return_bps > 6.0
+  down_rule: gross_return_bps < -6.0
+  neutral_rule: -6.0 <= gross_return_bps <= 6.0
+
+invalid_sample:
+  reject_missing_entry: true
+  reject_missing_exit: true
+  reject_incomplete_horizon: true
+  reject_disallowed_gap_crossing: true
+

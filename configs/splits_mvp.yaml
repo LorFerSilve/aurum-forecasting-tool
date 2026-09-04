@@ -1,0 +1,28 @@
+schema_version: 1
+
+timezone: UTC
+boundary_semantics: start_inclusive_end_exclusive
+
+splits:
+  train:
+    start: "2020-01-01T00:00:00Z"
+    end: "2023-01-01T00:00:00Z"
+  validation:
+    start: "2023-01-01T00:00:00Z"
+    end: "2024-01-01T00:00:00Z"
+  test:
+    start: "2024-01-01T00:00:00Z"
+    end: "2025-01-01T00:00:00Z"
+
+purging:
+  gap_minutes: 16
+  reason: 1min entry latency plus 15min label horizon
+
+development_guard:
+  reject_at_or_after: "2025-01-01T00:00:00Z"
+  allow_holdout_override: false
+
+preprocessing:
+  fit_on: train
+  random_shuffle: false
+
