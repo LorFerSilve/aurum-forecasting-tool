@@ -14,8 +14,10 @@ from __future__ import annotations
 
 import hashlib
 import io
+import json
 import os
 import re
+import tempfile
 import zipfile
 from collections.abc import Callable
 from contextlib import suppress
@@ -30,6 +32,13 @@ import httpx
 import numpy as np
 import pandas as pd
 from pandas.errors import EmptyDataError, ParserError
+
+from gold_forecasting.ingestion.contracts import (
+    M1Resource,
+    M1ResourcePage,
+    ProviderCapabilities,
+)
+from gold_forecasting.ingestion.transport import BoundedHttpRequester, HttpRequestPolicy
 
 HISTDATA_BASE_URL: Final = "https://www.histdata.com"
 HISTDATA_SOURCE: Final = "histdata"
@@ -56,6 +65,21 @@ _CSV_MEMBER_PATTERN: Final = re.compile(
     flags=re.IGNORECASE,
 )
 _MAX_ARCHIVE_BYTES: Final = 256 * 1024 * 1024
+_RAW_STATE_SCHEMA_VERSION: Final = 1
+
+HISTDATA_CAPABILITIES: Final = ProviderCapabilities(
+    annual_immutable_resources=True,
+    pagination_mode="none",
+    resume_mode="completed_resource_cache",
+    revision_mode="content_sha256",
+    available_fields=(
+        "bid_open",
+        "bid_high",
+        "bid_low",
+        "bid_close",
+        "volume_unreliable",
+    ),
+)
 
 
 class HistDataError(RuntimeError):
@@ -85,6 +109,8 @@ class HistDataArchive:
     source_page_url: str
     download_url: str
     observed_at_utc: datetime
+    ingested_at_utc: datetime
+    provider_revision: str
     reused: bool
     source: str = HISTDATA_SOURCE
     source_symbol: str = HISTDATA_SOURCE_SYMBOL
@@ -105,12 +131,16 @@ class HistDataArchive:
             "timeframe": self.timeframe,
             "year": self.year,
             "path": str(self.path),
+            "raw_state_path": str(_raw_state_path(self.path)),
             "sha256": self.sha256,
             "size_bytes": self.size_bytes,
             "dataset_version": self.dataset_version,
             "source_page_url": self.source_page_url,
             "download_url": self.download_url,
             "observed_at_utc": _format_utc(self.observed_at_utc),
+            "ingested_at_utc": _format_utc(self.ingested_at_utc),
+            "provider_revision": self.provider_revision,
+            "provider_revision_mode": HISTDATA_CAPABILITIES.revision_mode,
             "reused": self.reused,
             "volume_reliable": False,
         }
@@ -122,6 +152,16 @@ class HistDataIngestionResult:
 
     archive: HistDataArchive
     candles: pd.DataFrame
+
+
+@dataclass(frozen=True, slots=True)
+class _RawArchiveState:
+    """Immutable local provenance paired with a cached raw archive."""
+
+    sha256: str
+    size_bytes: int
+    first_ingested_at_utc: datetime
+    provider_revision: str
 
 
 class _DownloadFormParser(HTMLParser):
@@ -182,6 +222,9 @@ class HistDataM1Provider:
         user_agent: str = HISTDATA_USER_AGENT,
         clock: Callable[[], datetime] | None = None,
         max_archive_bytes: int = _MAX_ARCHIVE_BYTES,
+        request_policy: HttpRequestPolicy | None = None,
+        sleeper: Callable[[float], None] | None = None,
+        monotonic: Callable[[], float] | None = None,
     ) -> None:
         normalized_base = base_url.rstrip("/")
         parsed_base = urlsplit(normalized_base)
@@ -197,6 +240,17 @@ class HistDataM1Provider:
         self._user_agent = user_agent
         self._clock = clock or (lambda: datetime.now(UTC))
         self._max_archive_bytes = max_archive_bytes
+        self._requester = BoundedHttpRequester(
+            request_policy,
+            sleeper=sleeper,
+            monotonic=monotonic,
+        )
+
+    @property
+    def capabilities(self) -> ProviderCapabilities:
+        """Declare HistData's real annual-archive acquisition shape."""
+
+        return HISTDATA_CAPABILITIES
 
     def source_page_url(self, year: int) -> str:
         """Return the annual Generic ASCII M1 selection page."""
@@ -218,6 +272,71 @@ class HistDataM1Provider:
             / HISTDATA_SOURCE_SYMBOL
             / HISTDATA_TIMEFRAME
             / filename
+        )
+
+    def list_resource_page(
+        self,
+        *,
+        period_start_utc: datetime,
+        period_end_utc: datetime,
+        cursor: str | None = None,
+    ) -> M1ResourcePage:
+        """Describe complete annual archives; HistData has no pagination.
+
+        The catalogue is the deterministic intersection of the requested UTC
+        interval with fully closed calendar years.  Archive availability is
+        still confirmed by the normal public download request.
+        """
+
+        start = _as_utc_datetime(period_start_utc, name="period_start_utc")
+        end = _as_utc_datetime(period_end_utc, name="period_end_utc")
+        if start >= end:
+            raise ValueError("resource catalogue interval must be non-empty")
+        if cursor is not None:
+            raise ValueError("HistData annual resources do not support pagination cursors")
+        closed_before = min(end, _as_utc_datetime(self._clock(), name="clock result"))
+        resources: list[M1Resource] = []
+        for year in range(start.year, min(closed_before.year + 1, 9999)):
+            resource_start = datetime(year, 1, 1, tzinfo=UTC)
+            resource_end = datetime(year + 1, 1, 1, tzinfo=UTC)
+            if resource_start < start or resource_end > closed_before:
+                continue
+            resources.append(
+                M1Resource(
+                    resource_id=f"histdata:{HISTDATA_SOURCE_SYMBOL}:M1:{year}",
+                    period_start_utc=resource_start,
+                    period_end_utc=resource_end,
+                    immutable=True,
+                    partition=f"source_year={year}",
+                )
+            )
+        return M1ResourcePage(resources=tuple(resources), next_cursor=None)
+
+    def ingest_resource(
+        self,
+        resource: M1Resource,
+        raw_directory: str | Path,
+        *,
+        ingested_at_utc: datetime | None = None,
+        as_of_utc: datetime | None = None,
+    ) -> HistDataIngestionResult:
+        """Acquire a resource returned by :meth:`list_resource_page`."""
+
+        year = resource.period_start_utc.year
+        expected = M1Resource(
+            resource_id=f"histdata:{HISTDATA_SOURCE_SYMBOL}:M1:{year}",
+            period_start_utc=datetime(year, 1, 1, tzinfo=UTC),
+            period_end_utc=datetime(year + 1, 1, 1, tzinfo=UTC),
+            immutable=True,
+            partition=f"source_year={year}",
+        )
+        if resource != expected:
+            raise ValueError("resource does not match a HistData annual XAUUSD M1 archive")
+        return self.ingest_year(
+            year,
+            raw_directory,
+            ingested_at_utc=ingested_at_utc,
+            as_of_utc=as_of_utc,
         )
 
     def download_year(self, year: int, raw_directory: str | Path) -> HistDataArchive:
@@ -245,6 +364,10 @@ class HistDataM1Provider:
                 observed_at,
                 reused=True,
             )
+        if _raw_state_path(target).exists():
+            raise HistDataArchiveError(
+                f"raw archive is missing but immutable provenance already exists: {target}"
+            )
 
         if self._client is None:
             with httpx.Client(follow_redirects=True, timeout=self._timeout) as client:
@@ -258,11 +381,9 @@ class HistDataM1Provider:
 
         _validate_zip_bytes(payload)
         target.parent.mkdir(parents=True, exist_ok=True)
+        reused = False
         try:
-            with target.open("xb") as destination:
-                destination.write(payload)
-                destination.flush()
-                os.fsync(destination.fileno())
+            _publish_immutable_bytes(target, payload)
         except FileExistsError:
             # Another process won the race.  Its immutable result is acceptable
             # only when it is a valid archive with identical content.
@@ -271,11 +392,7 @@ class HistDataM1Provider:
                 raise HistDataArchiveError(
                     f"an immutable archive with different content already exists: {target}"
                 ) from None
-        except OSError:
-            # Never leave a partial file looking like a valid raw artefact.
-            with suppress(OSError):
-                target.unlink(missing_ok=True)
-            raise
+            reused = True
 
         return self._archive_record(
             target,
@@ -283,7 +400,7 @@ class HistDataM1Provider:
             page_url,
             download_url,
             observed_at,
-            reused=False,
+            reused=reused,
         )
 
     def parse_archive(
@@ -295,9 +412,14 @@ class HistDataM1Provider:
     ) -> pd.DataFrame:
         """Parse an archive into provider-neutral, completed UTC candles."""
 
+        effective_ingested_at = (
+            archive.ingested_at_utc
+            if ingested_at_utc is None and isinstance(archive, HistDataArchive)
+            else ingested_at_utc
+        )
         return parse_histdata_m1(
             archive,
-            ingested_at_utc=ingested_at_utc,
+            ingested_at_utc=effective_ingested_at,
             as_of_utc=as_of_utc,
         )
 
@@ -330,8 +452,13 @@ class HistDataM1Provider:
             "Accept": "text/html,application/xhtml+xml",
         }
         try:
-            page_response = client.get(page_url, headers=request_headers, timeout=self._timeout)
-            page_response.raise_for_status()
+            page_response = self._requester.request(
+                client,
+                "GET",
+                page_url,
+                headers=request_headers,
+                timeout=self._timeout,
+            )
         except httpx.HTTPError as exc:
             raise HistDataDownloadError(
                 f"could not load HistData download page for {year}: {exc}"
@@ -349,13 +476,14 @@ class HistDataM1Provider:
             "Referer": page_url,
         }
         try:
-            response = client.post(
+            response = self._requester.request(
+                client,
+                "POST",
                 download_url,
                 data=fields,
                 headers=post_headers,
                 timeout=self._timeout,
             )
-            response.raise_for_status()
         except httpx.HTTPError as exc:
             raise HistDataDownloadError(
                 f"could not download HistData archive for {year}: {exc}"
@@ -378,8 +506,8 @@ class HistDataM1Provider:
             )
         return payload, download_url
 
-    @staticmethod
     def _archive_record(
+        self,
         path: Path,
         year: int,
         page_url: str,
@@ -388,14 +516,27 @@ class HistDataM1Provider:
         *,
         reused: bool,
     ) -> HistDataArchive:
+        digest = _sha256_path(path)
+        size_bytes = path.stat().st_size
+        state = _load_or_create_raw_state(
+            path,
+            year=year,
+            page_url=page_url,
+            download_url=download_url,
+            observed_at=observed_at,
+            sha256=digest,
+            size_bytes=size_bytes,
+        )
         return HistDataArchive(
             path=path,
-            sha256=_sha256_path(path),
-            size_bytes=path.stat().st_size,
+            sha256=digest,
+            size_bytes=size_bytes,
             year=year,
             source_page_url=page_url,
             download_url=download_url,
             observed_at_utc=observed_at,
+            ingested_at_utc=state.first_ingested_at_utc,
+            provider_revision=state.provider_revision,
             reused=reused,
         )
 
@@ -467,6 +608,12 @@ def parse_histdata_m1(
         raise HistDataArchiveError("raw input is not an intact ZIP archive") from exc
 
     result = pd.concat(frames, ignore_index=True)
+    if isinstance(archive, HistDataArchive):
+        source_years = result["timestamp_open_utc"].dt.tz_convert(_SOURCE_TIMEZONE).dt.year
+        if not bool(source_years.eq(archive.year).all()):
+            raise HistDataParseError(
+                "raw archive contains records outside its declared source year"
+            )
     result.sort_values(["timestamp_open_utc", "source_member"], kind="stable", inplace=True)
     exact_columns = [
         "timestamp_open_utc",
@@ -677,6 +824,9 @@ def _read_archive(
             "archive_year": archive.year,
             "source_page_url": archive.source_page_url,
             "download_url": archive.download_url,
+            "raw_ingested_at_utc": _format_utc(archive.ingested_at_utc),
+            "provider_revision": archive.provider_revision,
+            "provider_revision_mode": HISTDATA_CAPABILITIES.revision_mode,
         }
         try:
             payload = path.read_bytes()
@@ -699,6 +849,204 @@ def _read_archive(
     return payload, digest, metadata
 
 
+def _raw_state_path(archive_path: Path) -> Path:
+    return archive_path.with_suffix(".archive.json")
+
+
+def _publish_immutable_bytes(target: Path, payload: bytes) -> None:
+    """Publish complete bytes atomically without replacing a concurrent writer.
+
+    Both names live on the same filesystem. A killed writer can leave only an
+    ignored temporary file; a reader never sees a partially written target.
+    """
+
+    temporary: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="wb", prefix=f".{target.name}.", suffix=".tmp", dir=target.parent, delete=False
+        ) as destination:
+            temporary = Path(destination.name)
+            destination.write(payload)
+            destination.flush()
+            os.fsync(destination.fileno())
+        os.link(temporary, target)
+    finally:
+        if temporary is not None:
+            with suppress(OSError):
+                temporary.unlink(missing_ok=True)
+
+
+def _load_or_create_raw_state(
+    archive_path: Path,
+    *,
+    year: int,
+    page_url: str,
+    download_url: str,
+    observed_at: datetime,
+    sha256: str,
+    size_bytes: int,
+) -> _RawArchiveState:
+    state_path = _raw_state_path(archive_path)
+    legacy_ingested_at = _legacy_ingestion_time(
+        archive_path,
+        year=year,
+        page_url=page_url,
+        sha256=sha256,
+        size_bytes=size_bytes,
+    )
+    if state_path.exists():
+        state = _read_raw_state(
+            state_path,
+            archive_path=archive_path,
+            year=year,
+            page_url=page_url,
+            sha256=sha256,
+            size_bytes=size_bytes,
+        )
+        if (
+            legacy_ingested_at is not None
+            and state.first_ingested_at_utc != legacy_ingested_at
+        ):
+            raise HistDataArchiveError(
+                "immutable raw archive ingestion time conflicts with legacy metadata"
+            )
+        return state
+
+    provider_revision = f"sha256:{sha256}"
+    payload = {
+        "schema_version": _RAW_STATE_SCHEMA_VERSION,
+        "source": HISTDATA_SOURCE,
+        "source_symbol": HISTDATA_SOURCE_SYMBOL,
+        "timeframe": HISTDATA_TIMEFRAME,
+        "year": year,
+        "archive": archive_path.name,
+        "sha256": sha256,
+        "size_bytes": size_bytes,
+        "first_ingested_at_utc": _format_utc(legacy_ingested_at or observed_at),
+        "provider_revision": provider_revision,
+        "provider_revision_mode": HISTDATA_CAPABILITIES.revision_mode,
+        "source_page_url": page_url,
+        "download_url": download_url,
+    }
+    try:
+        encoded = (json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n").encode()
+        _publish_immutable_bytes(state_path, encoded)
+    except FileExistsError:
+        # Another writer completed the exact same immutable resource first.
+        pass
+    except OSError as exc:
+        raise HistDataArchiveError(f"cannot persist raw archive provenance: {state_path}") from exc
+    return _read_raw_state(
+        state_path,
+        archive_path=archive_path,
+        year=year,
+        page_url=page_url,
+        sha256=sha256,
+        size_bytes=size_bytes,
+    )
+
+
+def _legacy_ingestion_time(
+    archive_path: Path,
+    *,
+    year: int,
+    page_url: str,
+    sha256: str,
+    size_bytes: int,
+) -> datetime | None:
+    """Read the original v0.1 acquisition time without changing its sidecar."""
+
+    legacy_path = archive_path.with_suffix(".metadata.json")
+    if not legacy_path.exists():
+        return None
+    try:
+        payload = json.loads(legacy_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise HistDataArchiveError(f"legacy raw metadata is unreadable: {legacy_path}") from exc
+    if not isinstance(payload, dict):
+        raise HistDataArchiveError(f"legacy raw metadata must be a JSON object: {legacy_path}")
+    expected: dict[str, object] = {
+        "schema_version": 1,
+        "source": HISTDATA_SOURCE,
+        "source_symbol": HISTDATA_SOURCE_SYMBOL,
+        "timeframe": HISTDATA_TIMEFRAME,
+        "year": year,
+        "archive": archive_path.name,
+        "sha256": sha256,
+        "size_bytes": size_bytes,
+        "source_page_url": page_url,
+    }
+    mismatches = [
+        name for name, expected_value in expected.items() if payload.get(name) != expected_value
+    ]
+    if mismatches:
+        raise HistDataArchiveError("legacy raw metadata mismatch for " + ", ".join(mismatches))
+    try:
+        timestamp_text = payload["first_ingested_at_utc"]
+        if not isinstance(timestamp_text, str):
+            raise ValueError("first_ingested_at_utc must be a timestamp string")
+        timestamp = datetime.fromisoformat(timestamp_text.replace("Z", "+00:00"))
+        if timestamp.tzinfo is None or timestamp.utcoffset() != timedelta(0):
+            raise ValueError("first_ingested_at_utc must be timezone-aware UTC")
+    except (KeyError, TypeError, ValueError) as exc:
+        raise HistDataArchiveError(
+            f"legacy raw metadata timestamp is invalid: {legacy_path}"
+        ) from exc
+    return timestamp.astimezone(UTC)
+
+
+def _read_raw_state(
+    state_path: Path,
+    *,
+    archive_path: Path,
+    year: int,
+    page_url: str,
+    sha256: str,
+    size_bytes: int,
+) -> _RawArchiveState:
+    try:
+        payload = json.loads(state_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise HistDataArchiveError(f"raw archive provenance is unreadable: {state_path}") from exc
+    if not isinstance(payload, dict):
+        raise HistDataArchiveError(f"raw archive provenance must be a JSON object: {state_path}")
+
+    expected: dict[str, object] = {
+        "schema_version": _RAW_STATE_SCHEMA_VERSION,
+        "source": HISTDATA_SOURCE,
+        "source_symbol": HISTDATA_SOURCE_SYMBOL,
+        "timeframe": HISTDATA_TIMEFRAME,
+        "year": year,
+        "archive": archive_path.name,
+        "sha256": sha256,
+        "size_bytes": size_bytes,
+        "provider_revision": f"sha256:{sha256}",
+        "provider_revision_mode": HISTDATA_CAPABILITIES.revision_mode,
+        "source_page_url": page_url,
+    }
+    mismatches = [
+        name for name, expected_value in expected.items() if payload.get(name) != expected_value
+    ]
+    if mismatches:
+        raise HistDataArchiveError(
+            "immutable raw archive provenance mismatch for " + ", ".join(mismatches)
+        )
+    try:
+        ingestion_time = datetime.fromisoformat(
+            str(payload["first_ingested_at_utc"]).replace("Z", "+00:00")
+        )
+        ingestion_time = _as_utc_datetime(ingestion_time, name="first_ingested_at_utc")
+        provider_revision = str(payload["provider_revision"])
+    except (KeyError, TypeError, ValueError) as exc:
+        raise HistDataArchiveError(f"raw archive provenance is invalid: {state_path}") from exc
+    return _RawArchiveState(
+        sha256=sha256,
+        size_bytes=size_bytes,
+        first_ingested_at_utc=ingestion_time,
+        provider_revision=provider_revision,
+    )
+
+
 def _sha256_path(path: Path) -> str:
     digest = hashlib.sha256()
     try:
@@ -717,11 +1065,12 @@ def _as_utc_datetime(value: datetime, *, name: str) -> datetime:
 
 
 def _format_utc(value: datetime) -> str:
-    return value.astimezone(UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
+    return value.astimezone(UTC).isoformat().replace("+00:00", "Z")
 
 
 __all__ = [
     "HISTDATA_BASE_URL",
+    "HISTDATA_CAPABILITIES",
     "HISTDATA_INSTRUMENT",
     "HISTDATA_SOURCE",
     "HISTDATA_SOURCE_SYMBOL",

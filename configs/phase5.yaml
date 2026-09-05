@@ -1,0 +1,14 @@
+schema_version: 1
+protocol_version: v0.0
+instrument_config: instrument_phase5.yaml
+features_config: features_mvp.yaml
+labels_config: labels.yaml
+costs_config: costs.yaml
+splits_config: splits_mvp.yaml
+model_config: model_mvp.yaml
+backtest_config: backtest_mvp.yaml
+
+run:
+  seed: 20260904
+  output_root: reports/runs
+  data_version: unbuilt

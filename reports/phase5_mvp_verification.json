@@ -1,0 +1,17 @@
+{
+  "baseline_data_version": "sha256:d5ad6e63676b19d9f80c84c31f2f643261b314962e0db11368a937cf7a5e6453",
+  "baseline_run_id": "20260905T215234405218Z-7c0c7334",
+  "hardened_data_version": "sha256:8a9c88569bceb283e0d28a6eab12c138f711614715616736510a1cbe758cdf5e",
+  "hardened_run_id": "20260905T215108619982Z-79ae0e0e",
+  "identical_results": {
+    "backtest/decisions.parquet": "d84d63ece5ff668e1eee81e3cc874dca70a99ca49c223f5b534108d3c0ff41fe",
+    "backtest/summary.json": "5e62195f198febc220b632e62b3070c4ff75118fc551c604218442e1169761b6",
+    "backtest/trades.parquet": "67dd42a630bad0ceac428a01c9d71e948fdcb4e47e081701b30cde9811846ca6",
+    "evaluation/hourly_metrics.csv": "b34e5cf51e332af59f5fde6a6a4ee450346e61492f4b6b78db3ed3d215a49372",
+    "evaluation/model_comparison.csv": "25c102650003092c56d34c84da6b25e7975083d9d92a6fab13af298cceab4ee4",
+    "evaluation/model_comparison.json": "35a4c6ba0f0bc9edc3b051ef1448063530a17cd530abc06aabde059a7f1a268f",
+    "evaluation/reliability_buckets.csv": "c0742b321af6e99c14d93bcfa12da77e1813a883156a25eb0e55826e22c8b3a9"
+  },
+  "schema_version": 1,
+  "status": "passed"
+}

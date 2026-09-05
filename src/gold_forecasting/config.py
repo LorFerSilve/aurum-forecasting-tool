@@ -190,6 +190,8 @@ class InstrumentDataConfig(ConfigModel):
         if "1min" in checked:
             raise ValueError("the raw timeframe must not also be a derived timeframe")
         for timeframe in checked:
+            if timeframe not in {"3min", "5min", "15min", "30min", "1h", "3h", "1d", "1mo"}:
+                raise ValueError(f"unsupported derived timeframe: {timeframe!r}")
             minutes = _fixed_timeframe_minutes(timeframe)
             if minutes is not None and minutes % 1 != 0:
                 raise ValueError("derived timeframes must align to the raw timeframe")

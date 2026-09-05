@@ -26,10 +26,10 @@ Daarna vervangen of versterken we telkens één onderdeel. Na iedere fase blijft
 | Onderdeel | Huidige status |
 |---|---|
 | Systeemontwerp | Afgerond in `project_idea.md` |
-| Roadmap | Fasen 0–4 uitgevoerd en geverifieerd |
-| Implementatie | Research-MVP voltooid; fase 5 nog niet gestart |
+| Roadmap | Fasen 0–5 uitgevoerd en geverifieerd; bronbeperking voor dag/maand vastgelegd |
+| Implementatie | Research-MVP en geharde intraday-datalaag voltooid |
 | Huidige release | `v0.1.0` |
-| Eerstvolgende stap | Fase 5 — primaire data hardenen en alle timeframes toevoegen |
+| Eerstvolgende stap | Fase 6 — streng evaluatiekader en backtester v1 |
 | Standaard einddoel | Professioneel paper-trading-systeem |
 | Echte orders | Afzonderlijke, optionele laatste fase |
 
@@ -647,20 +647,20 @@ De beperkte MVP-dataset omzetten in een duurzame historische en incrementeel bij
 
 ### Implementeren
 
-- [ ] Generaliseer het providercontract zonder de eerste adapter te breken.
-- [ ] Download de volledige gekozen ontwikkelingshistoriek.
-- [ ] Ondersteun paginering, retries, rate limits en hervatten.
-- [ ] Sla waar beschikbaar bid, ask, mid, spread en tick count op.
-- [ ] Bewaar providerrevisies en ingestietijd.
-- [ ] Maak raw data immutable en bestanden gehasht.
-- [ ] Implementeer een idempotente incrementele updater.
-- [ ] Leg markturen, weekends, feestdagen en onderhoudsvensters vast.
-- [ ] Markeer missing, stale en incomplete intervallen.
-- [ ] Voeg datakwaliteit per dag, bron en timeframe toe.
-- [ ] Resample vanuit de laagste betrouwbare resolutie.
-- [ ] Voeg `5min`, `30min`, `1h`, `3h`, `1d` en `1mo` toe.
-- [ ] Gebruik voor `1mo` uitsluitend een volledig afgesloten kalendermaand.
-- [ ] Versieer raw, curated en resamplinglogica afzonderlijk.
+- [x] Generaliseer het providercontract zonder de eerste adapter te breken.
+- [x] Download de volledige gekozen ontwikkelingshistoriek (2020–2024; geen holdout).
+- [x] Ondersteun paginering, retries, rate limits en hervatten; HistData hervat op jaararchiefniveau.
+- [x] Sla beschikbare bid-OHLC op; ontbrekende ask/mid/spread/tick count expliciet in capabilities.
+- [x] Bewaar providerrevisies als contenthash en behoud de oorspronkelijke ingestietijd.
+- [x] Maak raw data immutable en bestanden gehasht.
+- [x] Implementeer een idempotente incrementele updater.
+- [x] Leg kalenderbeleid vast: ongedocumenteerde sluitingen blijven onbekend; expliciete kalendercontracten beschikbaar.
+- [x] Markeer missing, stale en incomplete intervallen.
+- [x] Voeg datakwaliteit per dag, bron en timeframe toe, inclusief lege datasets.
+- [x] Resample vanuit de laagste betrouwbare resolutie.
+- [x] Voeg `5min`, `30min`, `1h`, `3h`, `1d` en `1mo` toe; dag/maand blijven voorlopig lege datasets.
+- [x] Gebruik voor `1mo` uitsluitend een volledig afgesloten, aantoonbaar volledig kalendermaandvenster.
+- [x] Versieer raw, curated, resamplinglogica en kwaliteitsrapportage afzonderlijk.
 
 ### Belangrijke invarianten
 
@@ -685,6 +685,19 @@ De beperkte MVP-dataset omzetten in een duurzame historische en incrementeel bij
 - Alle gebruikte timeframes zijn reproduceerbaar.
 - Bekende gaps zijn verklaard of gemarkeerd.
 - De `v0.1`-pipeline kan op de geharde data draaien zonder contractwijziging.
+
+### Verificatie en besluit — 2026-09-05
+
+Zie [het fase-5-verificatierapport](reports/phase5_verification.md) en
+[het datacontract](docs/data_contract_phase5.md). Twee herbouws leveren dezelfde 45 curated
+Parquet-bestanden en kwaliteitsrapporten op; de volledige MVP geeft op de geharde data
+dezelfde modelmetrics en backtest als op de oorspronkelijke data.
+
+Besluit: accepteer de datalaag en behoud de huidige modelchampion. De publieke HistData-bron
+blijft bruikbaar voor de gekozen intraday-input. `1d` en `1mo` worden ondersteund maar niet
+als modelinput ingezet: zonder vertrouwde kalender is volledigheid niet bewezen. Een
+kalender-/feedverbetering is daarvoor nodig; ontbrekende prijzen worden niet ingevuld.
+De release blijft `v0.1.0`; fasen 6–7 zijn nog nodig voor `v0.2`.
 
 ---
 

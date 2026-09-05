@@ -1,0 +1,119 @@
+{
+  "as_of_utc": "2025-01-01T00:00:00+00:00",
+  "calendar_version": "observed-source-v1",
+  "end_utc": "2025-01-01T00:00:00+00:00",
+  "quality_logic_version": "1.0.0",
+  "schema_version": 1,
+  "stale_after_minutes": 5,
+  "start_utc": "2020-01-01T00:00:00+00:00",
+  "timeframes": {
+    "15min": {
+      "days": 1827,
+      "duplicate_count": 0,
+      "incomplete_count": 0,
+      "missing_count": 6998,
+      "ohlc_invalid_count": 0,
+      "rows": 114762,
+      "stale_count": 6998,
+      "unexplained_gap_count": 0,
+      "unknown_gap_count": 2644,
+      "usable_complete_candles": true
+    },
+    "1d": {
+      "days": 1827,
+      "duplicate_count": 0,
+      "incomplete_count": 0,
+      "missing_count": 0,
+      "ohlc_invalid_count": 0,
+      "rows": 0,
+      "stale_count": 0,
+      "unexplained_gap_count": 0,
+      "unknown_gap_count": 1827,
+      "usable_complete_candles": false
+    },
+    "1h": {
+      "days": 1827,
+      "duplicate_count": 0,
+      "incomplete_count": 0,
+      "missing_count": 1701,
+      "ohlc_invalid_count": 0,
+      "rows": 28463,
+      "stale_count": 1701,
+      "unexplained_gap_count": 0,
+      "unknown_gap_count": 2488,
+      "usable_complete_candles": true
+    },
+    "1min": {
+      "days": 1827,
+      "duplicate_count": 0,
+      "incomplete_count": 0,
+      "missing_count": 101230,
+      "ohlc_invalid_count": 0,
+      "rows": 1726589,
+      "stale_count": 101230,
+      "unexplained_gap_count": 0,
+      "unknown_gap_count": 2766,
+      "usable_complete_candles": true
+    },
+    "1mo": {
+      "days": 1827,
+      "duplicate_count": 0,
+      "incomplete_count": 0,
+      "missing_count": 0,
+      "ohlc_invalid_count": 0,
+      "rows": 0,
+      "stale_count": 0,
+      "unexplained_gap_count": 0,
+      "unknown_gap_count": 60,
+      "usable_complete_candles": false
+    },
+    "30min": {
+      "days": 1827,
+      "duplicate_count": 0,
+      "incomplete_count": 0,
+      "missing_count": 3543,
+      "ohlc_invalid_count": 0,
+      "rows": 57215,
+      "stale_count": 3543,
+      "unexplained_gap_count": 0,
+      "unknown_gap_count": 2572,
+      "usable_complete_candles": true
+    },
+    "3h": {
+      "days": 1827,
+      "duplicate_count": 0,
+      "incomplete_count": 0,
+      "missing_count": 68,
+      "ohlc_invalid_count": 0,
+      "rows": 8402,
+      "stale_count": 68,
+      "unexplained_gap_count": 0,
+      "unknown_gap_count": 1984,
+      "usable_complete_candles": true
+    },
+    "3min": {
+      "days": 1827,
+      "duplicate_count": 0,
+      "incomplete_count": 0,
+      "missing_count": 33995,
+      "ohlc_invalid_count": 0,
+      "rows": 575254,
+      "stale_count": 33995,
+      "unexplained_gap_count": 0,
+      "unknown_gap_count": 2732,
+      "usable_complete_candles": true
+    },
+    "5min": {
+      "days": 1827,
+      "duplicate_count": 0,
+      "incomplete_count": 0,
+      "missing_count": 20517,
+      "ohlc_invalid_count": 0,
+      "rows": 345000,
+      "stale_count": 20517,
+      "unexplained_gap_count": 0,
+      "unknown_gap_count": 2708,
+      "usable_complete_candles": true
+    }
+  }
+}

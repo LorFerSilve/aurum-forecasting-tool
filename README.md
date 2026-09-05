@@ -5,6 +5,10 @@ implementeert de volledige research-MVP: publieke historische data, validatie, r
 causale features, labels, chronologische splits, modelselectie, voorspelling, evaluatie en een
 eenvoudige kostenbewuste backtest.
 
+Fase 5 voegt een apart gehard dataprofiel toe met hervatbare acquisitie, geversioneerde
+bronmetadata, acht afgeleide timeframes en dagelijkse kwaliteitsrapporten. De huidige
+release blijft `v0.1.0`; `v0.2` volgt pas na fasen 6–7.
+
 De huidige scope gebruikt HistData bid-only `1min`-candles uit 2020–2024, afgeleide `3min`-
 en `15min`-candles, achttien eenvoudige price-only features en een 15-minutenrichting
 (`down`, `neutral`, `up`). De broker-/databron zit achter een vervangbare provideradapter.
@@ -36,6 +40,27 @@ py -3.11 -m venv .venv
 .\.venv\Scripts\gold-forecast.exe mvp run --config configs/mvp.yaml --dry-run
 .\.venv\Scripts\gold-forecast.exe mvp run --config configs/mvp.yaml
 ```
+
+Voor het geharde dataprofiel:
+
+```powershell
+.\.venv\Scripts\gold-forecast.exe data update --config configs/phase5.yaml
+.\.venv\Scripts\gold-forecast.exe data validate --config configs/phase5.yaml
+.\.venv\Scripts\gold-forecast.exe mvp run --config configs/phase5.yaml
+.\.venv\Scripts\python.exe scripts/verify_phase5.py --include-mvp
+```
+
+De updater hergebruikt reeds gedownloade, gehashte jaararchieven binnen de vaste
+ontwikkelingsperiode 2020–2024. HistData levert hiermee geen actuele brokerfeed.
+Het geharde profiel schrijft naar een eigen `phase5`-submap in de curated-laag.
+Het verificatiescript vergelijkt twee herbouws en, met `--include-mvp`, de volledige
+modeluitkomsten. Na die vergelijking herstelt het de gegenereerde MVP-modelartefacten.
+
+Alle UTC-timeframes worden ondersteund: `1min`, `3min`, `5min`, `15min`, `30min`,
+`1h`, `3h`, `1d` en `1mo`. Voor de huidige bron blijven `1d` en `1mo` leeg zolang
+ontbrekende minuten niet aantoonbaar door een vertrouwde marktkalender worden verklaard.
+Het kwaliteitsrapport markeert deze beperking expliciet. De modelinput blijft `3min`.
+Zie het [fase-5-datacontract](docs/data_contract_phase5.md) voor de precieze regels.
 
 `data import` downloadt uitsluitend de uit `configs/splits_mvp.yaml` afgeleide
 ontwikkelingsjaren. Ruwe bronbestanden en afgeleide datasets worden lokaal gehouden en zijn

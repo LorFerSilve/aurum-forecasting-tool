@@ -63,6 +63,21 @@ def import_data(
     counts = ", ".join(f"{key}={value}" for key, value in result.row_counts.items())
     typer.echo(f"Built {result.dataset_version}: {counts}")
     typer.echo(f"Coverage report: {result.coverage_report_path}")
+    if result.quality_report_path is not None:
+        typer.echo(f"Daily quality report: {result.quality_report_path}")
+
+
+@data_app.command("update")
+def update_data(
+    config: ConfigOption = Path("configs/phase5.yaml"),
+) -> None:
+    """Resume immutable acquisitions and rebuild the configured development history."""
+    from gold_forecasting.data_pipeline import update_mvp_data
+
+    result = update_mvp_data(config)
+    summary = ", ".join(f"{key}={value}" for key, value in result.row_counts.items())
+    typer.echo(f"Updated {result.dataset_version}: {summary}")
+    typer.echo(f"Coverage report: {result.coverage_report_path}")
 
 
 @data_app.command("validate")

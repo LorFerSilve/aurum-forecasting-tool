@@ -1,0 +1,33 @@
+{
+  "completion_content_identical": true,
+  "completion_sha256": "49b485093cbacf2eb9b72400ea52c1d48b48b94a13a416daf8e8f14643d597bc",
+  "curated_dataset_versions": {
+    "15min": "sha256:366a48e9baa5a097aaa0a3cb6e98eecf70a311530045f2ba47ad99c45959db76",
+    "1d": "sha256:bf62092d1f066f065fe902f61456853f799433f1ccb5db24d27a292cbf9f7da3",
+    "1h": "sha256:06dff3ad219e6791d48d13e36b0cf23952c58fdc82969b011d731cd76c2e2206",
+    "1min": "sha256:ae899269c2f19fe38267bcd069ed951ba08aa1979354eab694cbee9be0e408cd",
+    "1mo": "sha256:2ac9ebbf0411f45b404ca5caa05b21cd2636469ff710b83f5bd4383cbb57ab6f",
+    "30min": "sha256:e8130e49e748363525e615aad0df7eadd891dd209ec65950d3ee3fac1c042e1b",
+    "3h": "sha256:fe0b7014024e690a28de664e03fbf3bcc3dc046f51a681a7b63d48139752e0f8",
+    "3min": "sha256:85705596397d199228bf65c392b7a8a2696d7dcf30365e3d5590710dc057ada9",
+    "5min": "sha256:34d2b512f1875c96c46d5ede42bbae1fa8763ab9d2435f351a4b80f919e60b7c"
+  },
+  "curated_file_count": 45,
+  "first_update_seconds": 92.02057790000254,
+  "mvp_manifests_unchanged": true,
+  "raw_dataset_version": "sha256:3c33401cf41959a8ac3aac9604892e0daf51b64cef34617610a8c04e1b68eddd",
+  "row_counts": {
+    "15min": 114762,
+    "1d": 0,
+    "1h": 28463,
+    "1min": 1726589,
+    "1mo": 0,
+    "30min": 57215,
+    "3h": 8402,
+    "3min": 575254,
+    "5min": 345000
+  },
+  "schema_version": 1,
+  "second_update_seconds": 93.9602417999995,
+  "status": "passed"
+}

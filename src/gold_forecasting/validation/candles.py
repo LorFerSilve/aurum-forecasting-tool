@@ -36,7 +36,18 @@ REQUIRED_CANDLE_COLUMNS = (
 
 DuplicatePolicy = Literal["raise", "drop_identical"]
 
-_TIMEFRAME_MINUTES = {"1min": 1, "3min": 3, "15min": 15}
+_TIMEFRAME_MINUTES = {
+    "1min": 1,
+    "3min": 3,
+    "5min": 5,
+    "15min": 15,
+    "30min": 30,
+    "1h": 60,
+    "3h": 180,
+    "1d": 1_440,
+}
+_CALENDAR_TIMEFRAMES = frozenset({"1mo"})
+SUPPORTED_TIMEFRAMES = frozenset({*_TIMEFRAME_MINUTES, *_CALENDAR_TIMEFRAMES})
 _DUPLICATE_VALUE_COLUMNS = (
     "timestamp_close_utc",
     *PRICE_COLUMNS,
@@ -193,7 +204,7 @@ def _validate_text_columns(candles: pd.DataFrame) -> None:
             indices = candles.index[invalid].tolist()[:5]
             _raise(f"{column} must contain non-empty strings; invalid rows: {indices}")
 
-    unsupported = sorted(set(candles["timeframe"]) - _TIMEFRAME_MINUTES.keys())
+    unsupported = sorted(set(candles["timeframe"]) - SUPPORTED_TIMEFRAMES)
     if unsupported:
         _raise(f"unsupported timeframe values: {unsupported}")
 
@@ -238,10 +249,19 @@ def _validate_prices(candles: pd.DataFrame) -> None:
 
 
 def _validate_timestamps(candles: pd.DataFrame, *, check_order: bool) -> None:
-    durations = candles["timeframe"].map(_TIMEFRAME_MINUTES).map(
-        lambda minutes: pd.Timedelta(minutes=int(minutes))
-    )
-    expected_closes = candles["timestamp_open_utc"] + durations
+    expected_closes = candles["timestamp_open_utc"].copy()
+    for timeframe, minutes in _TIMEFRAME_MINUTES.items():
+        timeframe_rows = candles["timeframe"] == timeframe
+        if timeframe_rows.any():
+            expected_closes.loc[timeframe_rows] = (
+                candles.loc[timeframe_rows, "timestamp_open_utc"]
+                + pd.Timedelta(minutes=minutes)
+            )
+    month_rows = candles["timeframe"] == "1mo"
+    if month_rows.any():
+        expected_closes.loc[month_rows] = candles.loc[
+            month_rows, "timestamp_open_utc"
+        ].map(lambda value: value + pd.offsets.MonthBegin(1))
     closes_match = candles["timestamp_close_utc"] == expected_closes
     if not closes_match.all():
         indices = candles.index[~closes_match].tolist()[:5]
@@ -259,6 +279,20 @@ def _validate_timestamps(candles: pd.DataFrame, *, check_order: bool) -> None:
         if not aligned.all():
             indices = opens.index[~aligned].tolist()[:5]
             _raise(f"{timeframe} candle opens must align to the UTC grid; invalid rows: {indices}")
+
+    if month_rows.any():
+        opens = candles.loc[month_rows, "timestamp_open_utc"]
+        aligned = (
+            opens.dt.day.eq(1)
+            & opens.dt.hour.eq(0)
+            & opens.dt.minute.eq(0)
+            & opens.dt.second.eq(0)
+            & opens.dt.microsecond.eq(0)
+            & opens.dt.nanosecond.eq(0)
+        )
+        if not aligned.all():
+            indices = opens.index[~aligned].tolist()[:5]
+            _raise(f"1mo candle opens must align to the UTC calendar; invalid rows: {indices}")
 
     if check_order:
         grouping = ["instrument", "timeframe", "source"]
@@ -323,11 +357,14 @@ def _detect_gaps_in_prepared(candles: pd.DataFrame) -> GapReport:
     previous = ordered.groupby(grouping, sort=False, dropna=False)[
         "timestamp_open_utc"
     ].shift(1)
-    cadence = pd.to_timedelta(
-        ordered["timeframe"].map(_TIMEFRAME_MINUTES).astype("int64"),
-        unit="min",
-    )
+    fixed_minutes = ordered["timeframe"].map(_TIMEFRAME_MINUTES)
+    cadence = pd.to_timedelta(fixed_minutes.fillna(0).astype("int64"), unit="min")
     expected = previous + cadence
+    month_rows = ordered["timeframe"].eq("1mo") & previous.notna()
+    if month_rows.any():
+        expected.loc[month_rows] = previous.loc[month_rows].map(
+            lambda value: value + pd.offsets.MonthBegin(1)
+        )
     is_gap = previous.notna() & ordered["timestamp_open_utc"].gt(expected)
     if not is_gap.any():
         return GapReport()
@@ -335,11 +372,29 @@ def _detect_gaps_in_prepared(candles: pd.DataFrame) -> GapReport:
     gap_rows = ordered.loc[is_gap, [*grouping, "timestamp_open_utc"]].copy()
     gap_rows["previous_open_utc"] = previous.loc[is_gap]
     gap_rows["expected_next_open_utc"] = expected.loc[is_gap]
-    gap_rows["missing_candles"] = (
-        (gap_rows["timestamp_open_utc"] - gap_rows["previous_open_utc"])
-        // cadence.loc[is_gap]
-        - 1
-    ).astype("int64")
+    fixed_gap_rows = gap_rows["timeframe"].ne("1mo")
+    gap_rows["missing_candles"] = 0
+    if fixed_gap_rows.any():
+        fixed_indices = gap_rows.index[fixed_gap_rows]
+        gap_rows.loc[fixed_indices, "missing_candles"] = (
+            (
+                gap_rows.loc[fixed_indices, "timestamp_open_utc"]
+                - gap_rows.loc[fixed_indices, "previous_open_utc"]
+            )
+            // cadence.loc[fixed_indices]
+            - 1
+        ).astype("int64")
+    month_gap_rows = ~fixed_gap_rows
+    if month_gap_rows.any():
+        month_indices = gap_rows.index[month_gap_rows]
+        current = gap_rows.loc[month_indices, "timestamp_open_utc"]
+        prior = gap_rows.loc[month_indices, "previous_open_utc"]
+        gap_rows.loc[month_indices, "missing_candles"] = (
+            (current.dt.year - prior.dt.year) * 12
+            + current.dt.month
+            - prior.dt.month
+            - 1
+        ).astype("int64")
 
     found = tuple(
         CandleGap(
@@ -388,10 +443,10 @@ def validate_candles(
         check_order=True,
     )
     if expected_timeframe is not None:
-        if expected_timeframe not in _TIMEFRAME_MINUTES:
+        if expected_timeframe not in SUPPORTED_TIMEFRAMES:
             _raise(f"unsupported expected timeframe: {expected_timeframe!r}")
         observed = set(prepared["timeframe"])
-        if observed != {expected_timeframe}:
+        if observed and observed != {expected_timeframe}:
             _raise(
                 f"expected only {expected_timeframe} candles, observed: {sorted(observed)}"
             )
@@ -408,6 +463,7 @@ __all__ = [
     "CANDLE_KEY_COLUMNS",
     "PRICE_COLUMNS",
     "REQUIRED_CANDLE_COLUMNS",
+    "SUPPORTED_TIMEFRAMES",
     "CandleGap",
     "CandleValidationError",
     "CandleValidationResult",

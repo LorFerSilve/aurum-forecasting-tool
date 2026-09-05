@@ -25,7 +25,7 @@ from gold_forecasting.artifacts import (
     write_parquet_atomic,
 )
 from gold_forecasting.config import ProjectConfig, load_project_config
-from gold_forecasting.data_pipeline import validate_existing_mvp_data
+from gold_forecasting.data_pipeline import _manifest_path, validate_existing_mvp_data
 from gold_forecasting.datasets.preprocessing import (
     fit_train_preprocessor,
     load_preprocessor,
@@ -98,8 +98,7 @@ def _base(config: ProjectConfig) -> tuple[str, str]:
 
 
 def _curated_manifest_path(root: Path, config: ProjectConfig, timeframe: str) -> Path:
-    source, instrument = _base(config)
-    return root / "data" / "curated" / source / instrument / timeframe / "manifest.json"
+    return _manifest_path(root, config, "curated", timeframe)
 
 
 def _load_curated(

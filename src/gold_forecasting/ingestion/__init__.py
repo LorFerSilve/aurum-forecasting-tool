@@ -1,17 +1,25 @@
 """Replaceable market-data ingestion adapters."""
 
 from gold_forecasting.ingestion.contracts import (
+    IncrementalM1Provider,
     M1IngestionBatch,
     M1Provider,
+    M1Resource,
+    M1ResourcePage,
+    PaginationMode,
+    ProviderCapabilities,
     ProviderConfigurationError,
     ProviderFactory,
     RawArtifact,
+    ResumeMode,
+    RevisionMode,
     create_m1_provider,
     register_m1_provider,
     registered_m1_adapters,
 )
 from gold_forecasting.ingestion.histdata import (
     HISTDATA_BASE_URL,
+    HISTDATA_CAPABILITIES,
     HISTDATA_INSTRUMENT,
     HISTDATA_SOURCE,
     HISTDATA_SOURCE_SYMBOL,
@@ -27,14 +35,22 @@ from gold_forecasting.ingestion.histdata import (
     download_histdata_year,
     parse_histdata_m1,
 )
+from gold_forecasting.ingestion.transport import BoundedHttpRequester, HttpRequestPolicy
+from gold_forecasting.ingestion.updater import (
+    IncrementalUpdateError,
+    IncrementalUpdateResult,
+    update_m1_history,
+)
 
 __all__ = [
     "HISTDATA_BASE_URL",
+    "HISTDATA_CAPABILITIES",
     "HISTDATA_INSTRUMENT",
     "HISTDATA_SOURCE",
     "HISTDATA_SOURCE_SYMBOL",
     "HISTDATA_TIMEFRAME",
     "HISTDATA_USER_AGENT",
+    "BoundedHttpRequester",
     "HistDataArchive",
     "HistDataArchiveError",
     "HistDataDownloadError",
@@ -42,14 +58,25 @@ __all__ = [
     "HistDataIngestionResult",
     "HistDataM1Provider",
     "HistDataParseError",
+    "HttpRequestPolicy",
+    "IncrementalM1Provider",
+    "IncrementalUpdateError",
+    "IncrementalUpdateResult",
     "M1IngestionBatch",
     "M1Provider",
+    "M1Resource",
+    "M1ResourcePage",
+    "PaginationMode",
+    "ProviderCapabilities",
     "ProviderConfigurationError",
     "ProviderFactory",
     "RawArtifact",
+    "ResumeMode",
+    "RevisionMode",
     "create_m1_provider",
     "download_histdata_year",
     "parse_histdata_m1",
     "register_m1_provider",
     "registered_m1_adapters",
+    "update_m1_history",
 ]

@@ -223,4 +223,4 @@ def test_resampling_rejects_non_1min_input_and_unknown_target() -> None:
     with pytest.raises(ResamplingError, match="must all use timeframe '1min'"):
         resample_candles(source, "15min")
     with pytest.raises(ResamplingError, match="target_timeframe"):
-        resample_candles(_candles(3), "5min")
+        resample_candles(_candles(7), "7min")

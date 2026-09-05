@@ -1,4 +1,4 @@
-"""End-to-end phase-2 market-data build for the XAU/USD MVP."""
+"""Reproducible market-data builds shared by the MVP and hardened data profile."""
 
 from __future__ import annotations
 
@@ -23,12 +23,18 @@ from gold_forecasting.artifacts import (
 )
 from gold_forecasting.config import ProjectConfig, load_project_config
 from gold_forecasting.ingestion import (
+    IncrementalM1Provider,
     M1IngestionBatch,
     M1Provider,
     ProviderConfigurationError,
     create_m1_provider,
+    update_m1_history,
 )
-from gold_forecasting.resampling import resample_mvp_timeframes
+from gold_forecasting.resampling import (
+    RESAMPLING_LOGIC_VERSION,
+    resample_candles,
+    resample_timeframes,
+)
 from gold_forecasting.validation import validate_candles
 
 
@@ -45,6 +51,41 @@ class DataBuildResult:
     curated_manifest_paths: dict[str, Path]
     coverage_report_path: Path
     gap_report_path: Path
+    quality_report_path: Path | None = None
+
+
+RAW_LOGIC_VERSION = "1.0.0"
+CURATED_LOGIC_VERSION = "2.0.0"
+
+
+def _timeframes(config: ProjectConfig) -> tuple[str, ...]:
+    return ("1min", *config.instrument.data.derived_timeframes)
+
+
+def _is_hardened(config: ProjectConfig) -> bool:
+    return set(config.instrument.data.derived_timeframes) != {"3min", "15min"}
+
+
+def _validate_data_policy(config: ProjectConfig) -> None:
+    if _is_hardened(config) and (
+        config.instrument.provider.market_hours_policy != "observed_source_rows"
+    ):
+        raise DataBuildError("hardened build requires the documented observed_source_rows policy")
+
+
+def _quality_output_paths(root: Path) -> list[Path]:
+    return [
+        root / "reports" / "data" / name
+        for name in (
+            "phase5_quality_daily.parquet",
+            "phase5_quality_gaps.parquet",
+            "phase5_quality.json",
+            "phase5_quality.md",
+            "phase5_coverage.json",
+            "phase5_coverage.md",
+            "phase5_gaps_1min.parquet",
+        )
+    ]
 
 
 _RAW_PROVIDER_PROVENANCE_FIELDS = (
@@ -60,8 +101,7 @@ _RAW_PROVIDER_PROVENANCE_FIELDS = (
 def _raw_provider_provenance(config: ProjectConfig) -> dict[str, object]:
     provider = config.instrument.provider
     return {
-        field_name: getattr(provider, field_name)
-        for field_name in _RAW_PROVIDER_PROVENANCE_FIELDS
+        field_name: getattr(provider, field_name) for field_name in _RAW_PROVIDER_PROVENANCE_FIELDS
     }
 
 
@@ -112,7 +152,7 @@ def _stable_ingestion_time(result: M1IngestionBatch) -> datetime:
             raise DataBuildError(f"raw metadata ingestion timestamp is not UTC: {path}")
         return timestamp
 
-    timestamp = result.archive.observed_at_utc.astimezone(UTC)
+    timestamp = result.archive.ingested_at_utc.astimezone(UTC)
     write_json_atomic(
         path,
         {
@@ -151,8 +191,9 @@ def _year_output_path(
         / "curated"
         / source
         / instrument
+        / ("phase5" if _is_hardened(config) else "")
         / timeframe
-        / f"source_year={year}"
+        / f"{'utc_year' if _is_hardened(config) else 'source_year'}={year}"
         / "candles.parquet"
     )
 
@@ -170,7 +211,13 @@ def _manifest_path(
         if layer == "raw"
         else _path_component(config.instrument.instrument.id, field="instrument.id")
     )
-    return root / "data" / layer / source / symbol / timeframe / "manifest.json"
+    base = root / "data" / layer / source / symbol
+    if _is_hardened(config) and layer == "curated":
+        base = base / "phase5"
+    filename = (
+        "manifest_phase5.json" if _is_hardened(config) and layer == "raw" else "manifest.json"
+    )
+    return base / timeframe / filename
 
 
 def _timestamp_bounds(frames: list[pd.DataFrame]) -> tuple[datetime | None, datetime | None]:
@@ -254,9 +301,7 @@ def _validate_ingestion_batch(
     }
     for column, wanted in candle_expectations.items():
         if column not in candles.columns or set(candles[column].dropna()) != {wanted}:
-            raise DataBuildError(
-                f"provider candles must contain only {column}={wanted!r}"
-            )
+            raise DataBuildError(f"provider candles must contain only {column}={wanted!r}")
 
 
 def _coverage_markdown(report: dict[str, object]) -> str:
@@ -269,13 +314,12 @@ def _coverage_markdown(report: dict[str, object]) -> str:
         "| Timeframe | Rijen | Eerste candle | Laatste candle |",
         "|---|---:|---|---|",
     ]
-    for timeframe in ("1min", "3min", "15min"):
-        item = timeframes[timeframe]
+    for timeframe, item in timeframes.items():
         lines.append(f"| {timeframe} | {item['rows']} | {item['start']} | {item['end']} |")
     lines.extend(
         [
             "",
-            f"Gedetecteerde 1min-gaten: **{report['gap_count_1min']}**. ",
+            f"Gedetecteerde 1min-gaten: **{report['gap_count_1min']}**.",
             "Gaten zijn gerapporteerd en niet geïnterpoleerd.",
             "",
             "De bron is bid-only. Het volumeveld is niet geschikt als modelinput.",
@@ -294,21 +338,20 @@ def build_mvp_data(
     """Download, validate, resample, store, and manifest the MVP data."""
 
     config = load_project_config(config_path)
-    selected_years = tuple(sorted(years or _development_years(config)))
+    selected_years = tuple(sorted(_development_years(config) if years is None else years))
     _validate_requested_years(config, selected_years)
     root = _project_root(config)
     raw_root = root / "data" / "raw"
     active_provider = provider or create_m1_provider(config.instrument.provider)
     source = config.instrument.provider.id
     instrument = config.instrument.instrument.id
+    hardened = _is_hardened(config)
+    timeframes = _timeframes(config)
+    _validate_data_policy(config)
 
     raw_paths: list[Path] = []
     raw_sidecars: list[Path] = []
-    frames_by_timeframe: dict[str, list[pd.DataFrame]] = {
-        "1min": [],
-        "3min": [],
-        "15min": [],
-    }
+    frames_by_timeframe: dict[str, list[pd.DataFrame]] = {key: [] for key in timeframes}
     outputs_by_timeframe: dict[str, list[Path]] = {key: [] for key in frames_by_timeframe}
 
     for year in selected_years:
@@ -337,6 +380,10 @@ def build_mvp_data(
             development_end,
             inclusive="left",
         )
+        if hardened:
+            # A source-local year may spill into the next UTC year. A partial
+            # UTC build must apply the same scope to storage, lineage and audits.
+            in_development &= one_minute["timestamp_open_utc"].dt.year.isin(selected_years)
         one_minute = one_minute.loc[in_development].reset_index(drop=True)
         if one_minute.empty:
             raise DataBuildError(
@@ -344,13 +391,31 @@ def build_mvp_data(
             )
 
         frames_by_timeframe["1min"].append(one_minute)
-        resampled = resample_mvp_timeframes(one_minute)
-        frames_by_timeframe["3min"].append(resampled["3min"])
-        frames_by_timeframe["15min"].append(resampled["15min"])
+        if not hardened:
+            for timeframe in timeframes[1:]:
+                frames_by_timeframe[timeframe].append(resample_candles(one_minute, timeframe))
 
-        for timeframe in ("1min", "3min", "15min"):
+    # Merge before phase-5 aggregation: a UTC window may cross source-file boundaries.
+    combined_one_minute = pd.concat(frames_by_timeframe["1min"], ignore_index=True)
+    combined_validation = validate_candles(combined_one_minute, expected_timeframe="1min")
+    combined_one_minute = combined_validation.candles
+    if hardened:
+        derived = resample_timeframes(
+            combined_one_minute,
+            timeframes[1:],
+            closed_through_utc=config.splits.splits.test.end,
+        )
+        for timeframe in timeframes:
+            combined = combined_one_minute if timeframe == "1min" else derived[timeframe]
+            frames_by_timeframe[timeframe] = [
+                combined.loc[combined["timestamp_open_utc"].dt.year.eq(year)].reset_index(drop=True)
+                for year in selected_years
+            ]
+        del derived
+    for timeframe in timeframes:
+        for year, frame in zip(selected_years, frames_by_timeframe[timeframe], strict=True):
             output_path = _year_output_path(root, config, timeframe, year)
-            write_parquet_atomic(output_path, frames_by_timeframe[timeframe][-1])
+            write_parquet_atomic(output_path, frame)
             outputs_by_timeframe[timeframe].append(output_path)
 
     raw_outputs = tuple(file_digest(item, relative_to=root) for item in [*raw_paths, *raw_sidecars])
@@ -367,11 +432,19 @@ def build_mvp_data(
         parameters={
             "years": list(selected_years),
             "build_scope": (
-                "complete"
-                if selected_years == _development_years(config)
-                else "partial"
+                "complete" if selected_years == _development_years(config) else "partial"
             ),
             **_raw_provider_provenance(config),
+            **(
+                {
+                    "raw_logic_version": RAW_LOGIC_VERSION,
+                    "provider_revisions": {
+                        item.name: f"sha256:{sha256_file(item)}" for item in raw_paths
+                    },
+                }
+                if hardened
+                else {}
+            ),
         },
         period_start_utc=raw_start,
         period_end_utc=raw_end,
@@ -380,7 +453,7 @@ def build_mvp_data(
 
     curated_manifests: dict[str, DatasetManifest] = {}
     curated_manifest_paths: dict[str, Path] = {}
-    for timeframe in ("1min", "3min", "15min"):
+    for timeframe in timeframes:
         inputs = (
             raw_outputs
             if timeframe == "1min"
@@ -400,25 +473,31 @@ def build_mvp_data(
             years=selected_years,
             parameters={
                 "build_scope": (
-                    "complete"
-                    if selected_years == _development_years(config)
-                    else "partial"
+                    "complete" if selected_years == _development_years(config) else "partial"
                 ),
                 "complete_windows_only": True,
                 "interpolate_gaps": False,
                 "alignment_timezone": "UTC",
+                **(
+                    {
+                        "curated_logic_version": CURATED_LOGIC_VERSION,
+                        "resampling_logic_version": RESAMPLING_LOGIC_VERSION,
+                        "partition_basis": "utc_open_year",
+                        "calendar_policy": "observed-source-v1",
+                        "completeness_policy": "dense_minutes_unknown_closures_not_certified",
+                        "closed_through_utc": config.splits.splits.test.end.isoformat(),
+                    }
+                    if hardened
+                    else {}
+                ),
             },
             source=source,
             instrument=instrument,
         )
 
-    combined_one_minute = pd.concat(frames_by_timeframe["1min"], ignore_index=True)
-    combined_validation = validate_candles(
-        combined_one_minute,
-        expected_timeframe="1min",
-    )
     gaps = combined_validation.gaps.to_frame()
-    gap_report_path = root / "reports" / "data" / "mvp_gaps_1min.parquet"
+    prefix = "phase5" if hardened else "mvp"
+    gap_report_path = root / "reports" / "data" / f"{prefix}_gaps_1min.parquet"
     write_parquet_atomic(gap_report_path, gaps)
 
     timeframes_report: dict[str, dict[str, object]] = {}
@@ -442,10 +521,44 @@ def build_mvp_data(
         "missing_candles_1min": (int(gaps["missing_candles"].sum()) if not gaps.empty else 0),
         "gap_report": gap_report_path.relative_to(root).as_posix(),
     }
-    coverage_json_path = root / "reports" / "data" / "mvp_coverage.json"
+    coverage_json_path = root / "reports" / "data" / f"{prefix}_coverage.json"
     write_json_atomic(coverage_json_path, coverage)
-    coverage_report_path = root / "reports" / "data" / "mvp_coverage.md"
+    coverage_report_path = root / "reports" / "data" / f"{prefix}_coverage.md"
     write_text_atomic(coverage_report_path, _coverage_markdown(coverage))
+
+    quality_report_path = None
+    if hardened:
+        from gold_forecasting.data_quality_pipeline import (
+            QUALITY_LOGIC_VERSION,
+            write_quality_artifacts,
+        )
+
+        quality_report_path, quality_outputs = write_quality_artifacts(
+            config,
+            frames_by_timeframe,
+            years=selected_years,
+        )
+        # Publish last. A failed rebuild cannot authenticate mixed-generation outputs.
+        write_json_atomic(
+            _completion_path(root, config),
+            {
+                "schema_version": 1,
+                "quality_logic_version": QUALITY_LOGIC_VERSION,
+                "raw_dataset_version": raw_manifest.dataset_version,
+                "curated_dataset_versions": {
+                    key: value.dataset_version for key, value in curated_manifests.items()
+                },
+                "reports": [
+                    file_digest(item, relative_to=root).model_dump(mode="json")
+                    for item in [
+                        *quality_outputs,
+                        coverage_json_path,
+                        coverage_report_path,
+                        gap_report_path,
+                    ]
+                ],
+            },
+        )
 
     return DataBuildResult(
         dataset_version=curated_manifests["1min"].dataset_version,
@@ -455,7 +568,29 @@ def build_mvp_data(
         curated_manifest_paths=curated_manifest_paths,
         coverage_report_path=coverage_report_path,
         gap_report_path=gap_report_path,
+        quality_report_path=quality_report_path,
     )
+
+
+def _completion_path(root: Path, config: ProjectConfig) -> Path:
+    return _manifest_path(root, config, "curated", "1min").parent.parent / "phase5_build.json"
+
+
+def update_mvp_data(config_path: str | Path) -> DataBuildResult:
+    """Acquire missing immutable resources, then rebuild the configured data profile."""
+    config = load_project_config(config_path)
+    _validate_data_policy(config)
+    provider = create_m1_provider(config.instrument.provider)
+    if not isinstance(provider, IncrementalM1Provider):
+        raise DataBuildError("configured provider does not support incremental acquisition")
+    update_m1_history(
+        provider,
+        _project_root(config) / "data" / "raw",
+        period_start_utc=config.splits.splits.train.start,
+        period_end_utc=config.splits.splits.test.end,
+        reject_at_or_after_utc=config.splits.development_guard.reject_at_or_after,
+    )
+    return build_mvp_data(config_path, provider=provider)
 
 
 def _manifest_years(manifest: DatasetManifest) -> tuple[int, ...]:
@@ -545,6 +680,7 @@ def validate_existing_mvp_data(
     """
 
     config = load_project_config(config_path)
+    _validate_data_policy(config)
     try:
         create_m1_provider(config.instrument.provider)
     except ProviderConfigurationError as exc:
@@ -553,7 +689,7 @@ def validate_existing_mvp_data(
     counts: dict[str, int] = {}
     manifests: dict[str, DatasetManifest] = {}
     manifest_years: tuple[int, ...] | None = None
-    for timeframe in ("1min", "3min", "15min"):
+    for timeframe in _timeframes(config):
         manifest_path = _manifest_path(root, config, "curated", timeframe)
         if not manifest_path.is_file():
             raise DataBuildError(f"missing curated manifest: {manifest_path}")
@@ -569,6 +705,17 @@ def validate_existing_mvp_data(
             layer="curated",
             timeframe=timeframe,
         )
+        if _is_hardened(config):
+            expected_logic = {
+                "curated_logic_version": CURATED_LOGIC_VERSION,
+                "resampling_logic_version": RESAMPLING_LOGIC_VERSION,
+                "partition_basis": "utc_open_year",
+                "calendar_policy": "observed-source-v1",
+                "completeness_policy": "dense_minutes_unknown_closures_not_certified",
+                "closed_through_utc": config.splits.splits.test.end.isoformat(),
+            }
+            if any(manifest.parameters.get(key) != value for key, value in expected_logic.items()):
+                raise DataBuildError("curated data logic differs from the hardened configuration")
         years = _manifest_years(manifest)
         _validate_requested_years(config, years)
         if not allow_partial and years != _development_years(config):
@@ -585,9 +732,7 @@ def validate_existing_mvp_data(
             raise DataBuildError("curated timeframe manifests use different source years")
 
         expected_outputs = tuple(
-            _year_output_path(root, config, timeframe, year)
-            .relative_to(root)
-            .as_posix()
+            _year_output_path(root, config, timeframe, year).relative_to(root).as_posix()
             for year in years
         )
         observed_outputs = tuple(output.path for output in manifest.outputs)
@@ -604,9 +749,18 @@ def validate_existing_mvp_data(
             frames.append(pd.read_parquet(path))
         combined = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
         validated = validate_candles(combined, expected_timeframe=timeframe)
-        if set(validated.candles["instrument"]) != {config.instrument.instrument.id}:
+        empty_optional = (
+            _is_hardened(config)
+            and timeframe not in {"1min", "3min", "15min"}
+            and validated.candles.empty
+        )
+        if not empty_optional and set(validated.candles["instrument"]) != {
+            config.instrument.instrument.id
+        }:
             raise DataBuildError(f"curated {timeframe} instrument differs from config")
-        if set(validated.candles["source"]) != {config.instrument.provider.id}:
+        if not empty_optional and set(validated.candles["source"]) != {
+            config.instrument.provider.id
+        }:
             raise DataBuildError(f"curated {timeframe} source differs from config")
         if len(validated.candles) != manifest.row_count:
             raise DataBuildError(f"row count differs from manifest for {timeframe}")
@@ -616,7 +770,7 @@ def validate_existing_mvp_data(
         development_start = config.splits.splits.train.start
         development_end = config.splits.splits.test.end
         guard = config.splits.development_guard.reject_at_or_after
-        if (
+        if not empty_optional and (
             actual_start is None
             or actual_end is None
             or actual_start < development_start
@@ -644,38 +798,59 @@ def validate_existing_mvp_data(
     )
     raw_years = _manifest_years(raw_manifest)
     _validate_requested_years(config, raw_years)
-    expected_raw_scope = (
-        "complete" if raw_years == _development_years(config) else "partial"
-    )
+    expected_raw_scope = "complete" if raw_years == _development_years(config) else "partial"
     if raw_manifest.parameters.get("build_scope") != expected_raw_scope:
         raise DataBuildError("raw manifest build_scope is inconsistent with its years")
     if raw_years != manifest_years:
         raise DataBuildError("raw and curated manifests use different source years")
     expected_provider = _raw_provider_provenance(config)
     provider_mismatches = [
-        f"{field_name}={raw_manifest.parameters.get(field_name)!r} "
-        f"(expected {expected!r})"
+        f"{field_name}={raw_manifest.parameters.get(field_name)!r} (expected {expected!r})"
         for field_name, expected in expected_provider.items()
         if raw_manifest.parameters.get(field_name) != expected
     ]
     if provider_mismatches:
         raise DataBuildError(
-            "raw manifest provider provenance mismatch: "
-            + "; ".join(provider_mismatches)
+            "raw manifest provider provenance mismatch: " + "; ".join(provider_mismatches)
         )
     if raw_manifest.outputs != manifests["1min"].inputs:
-        raise DataBuildError(
-            "curated 1min lineage does not exactly match raw manifest outputs"
-        )
+        raise DataBuildError("curated 1min lineage does not exactly match raw manifest outputs")
     if raw_manifest.row_count != manifests["1min"].row_count:
         raise DataBuildError("raw and curated 1min row counts differ")
 
     one_minute_outputs = manifests["1min"].outputs
-    for timeframe in ("3min", "15min"):
+    for timeframe in _timeframes(config)[1:]:
         if manifests[timeframe].inputs != one_minute_outputs:
             raise DataBuildError(
                 f"curated {timeframe} lineage does not exactly match curated 1min outputs"
             )
+    if _is_hardened(config):
+        from gold_forecasting.data_quality_pipeline import QUALITY_LOGIC_VERSION
+
+        if raw_manifest.parameters.get("raw_logic_version") != RAW_LOGIC_VERSION:
+            raise DataBuildError("raw data logic differs from the hardened configuration")
+        try:
+            completion = json.loads(_completion_path(root, config).read_text(encoding="utf-8"))
+            if (
+                completion["schema_version"] != 1
+                or completion["quality_logic_version"] != QUALITY_LOGIC_VERSION
+            ):
+                raise DataBuildError("hardened build quality logic is stale")
+            if completion["raw_dataset_version"] != raw_manifest.dataset_version:
+                raise DataBuildError("hardened build raw version is stale")
+            if completion["curated_dataset_versions"] != {
+                key: value.dataset_version for key, value in manifests.items()
+            }:
+                raise DataBuildError("hardened build curated versions are stale")
+            reports = [FileDigest.model_validate(item) for item in completion["reports"]]
+            if [item.path for item in reports] != [
+                item.relative_to(root).as_posix() for item in _quality_output_paths(root)
+            ]:
+                raise DataBuildError("hardened build lacks the required quality report set")
+            for item in reports:
+                _verify_file_digest(root, item)
+        except (OSError, KeyError, TypeError, ValueError) as exc:
+            raise DataBuildError("missing or invalid hardened build completion record") from exc
     return counts
 
 
@@ -683,5 +858,6 @@ __all__ = [
     "DataBuildError",
     "DataBuildResult",
     "build_mvp_data",
+    "update_mvp_data",
     "validate_existing_mvp_data",
 ]
