@@ -730,6 +730,8 @@ def _evaluate_fold(
                 "mixed_precision_used": (
                     result.mixed_precision_used
                 ),
+                "optimizer_steps": result.optimizer_steps,
+                "amp_skipped_steps": result.amp_skipped_steps,
                 "validation_macro_f1": _metrics(
                     _prediction_records(
                         validation,
@@ -820,6 +822,9 @@ def _evaluate_fold(
                 seed_records
             ),
             "fit_seconds": result.fit_seconds,
+            "optimizer_steps": result.optimizer_steps,
+            "amp_skipped_steps": result.amp_skipped_steps,
+            "mixed_precision_used": result.mixed_precision_used,
             "inference_seconds": (
                 prediction.inference_seconds
             ),

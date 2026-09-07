@@ -6,6 +6,7 @@ import copy
 import math
 import os
 import random
+import tempfile
 import time
 from collections.abc import Iterator
 from dataclasses import dataclass
@@ -601,9 +602,22 @@ def save_checkpoint(
         "timeframes": result.model.timeframes,
         "parameter_count": result.parameter_count,
         "best_epoch": result.best_epoch,
+        "mixed_precision_used": result.mixed_precision_used,
+        "optimizer_steps": result.optimizer_steps,
+        "amp_skipped_steps": result.amp_skipped_steps,
         "normalizer": result.normalizer.as_record(),
     }
-    torch.save(payload, destination)
+    with tempfile.NamedTemporaryFile(
+        dir=destination.parent,
+        suffix=".tmp",
+        delete=False,
+    ) as handle:
+        temporary = Path(handle.name)
+    try:
+        torch.save(payload, temporary)
+        os.replace(temporary, destination)
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
 __all__ = [

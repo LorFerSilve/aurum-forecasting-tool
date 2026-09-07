@@ -83,7 +83,23 @@ class Phase7Reference:
             / "fold_summary.json"
         )
         payload = _verified_json(path, self.root, self.completion)
-        return str(payload["split"]["test_digest"])
+        split = payload.get("split")
+        if not isinstance(split, dict):
+            raise Phase8ReferenceError(
+                f"phase-7 fold summary has no split record: {horizon}/{fold_name}"
+            )
+        digest = split.get("test_digest")
+        if not isinstance(digest, str) or len(digest) != 64:
+            raise Phase8ReferenceError(
+                f"phase-7 fold summary has invalid test digest: {horizon}/{fold_name}"
+            )
+        try:
+            int(digest, 16)
+        except ValueError as exc:
+            raise Phase8ReferenceError(
+                f"phase-7 test digest is not hexadecimal: {horizon}/{fold_name}"
+            ) from exc
+        return digest
 
 
 def _completion_entry(
@@ -140,7 +156,12 @@ def load_phase7_reference(
     reference_directory: str,
     champion_config: Path,
 ) -> Phase7Reference:
-    reference = (root / reference_directory).resolve(strict=True)
+    try:
+        reference = (root / reference_directory).resolve(strict=True)
+    except FileNotFoundError as exc:
+        raise Phase8ReferenceError(
+            f"required frozen phase-7 run is missing: {reference_directory}"
+        ) from exc
     expected_root = (root / "reports" / "phase7_runs").resolve()
     if not reference.is_relative_to(expected_root):
         raise Phase8ReferenceError(
