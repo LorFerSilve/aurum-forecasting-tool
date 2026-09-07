@@ -167,6 +167,8 @@ def _select_family(
     family: str,
     config: BenchmarkConfig,
     directory: Path,
+    *,
+    allowed_feature_names: frozenset[str] | None = None,
 ) -> tuple[ModelSpec, int | None, DecisionPolicy, dict[str, Any]]:
     specs = (ModelSpec("reference", 0.1),) if family == "reference" else candidate_specs(family)
     audits: list[dict[str, Any]] = []
@@ -182,7 +184,12 @@ def _select_family(
                 raise ValueError(f"empty inner train/validation: {fold.name}/{inner.name}")
             started = time.perf_counter()
             model = fit_model(
-                train, names, spec, config, validation=validation if family == "xgboost" else None
+                train,
+                names,
+                spec,
+                config,
+                validation=validation if family == "xgboost" else None,
+                allowed_feature_names=allowed_feature_names,
             )
             probabilities, expected = model.predict(validation)
             predicted = prediction_records(_audit_records(validation), probabilities, expected)
@@ -272,6 +279,8 @@ def evaluate_fold(
     fold: WalkForwardFold,
     config: BenchmarkConfig,
     directory: Path,
+    *,
+    allowed_feature_names: frozenset[str] | None = None,
 ) -> dict[str, Any]:
     """Evaluate all candidates on identical rows; never fit the calibration block."""
     validate_development_frame(table)
@@ -295,8 +304,23 @@ def evaluate_fold(
     for family in FAMILIES:
         print(f"  {fold.name}: {family} tuning and evaluation", flush=True)
         destination = directory / family
-        spec, rounds, policy, _ = _select_family(table, names, fold, family, config, destination)
-        model = fit_model(train, names, spec, config, rounds=rounds)
+        spec, rounds, policy, _ = _select_family(
+            table,
+            names,
+            fold,
+            family,
+            config,
+            destination,
+            allowed_feature_names=allowed_feature_names,
+        )
+        model = fit_model(
+            train,
+            names,
+            spec,
+            config,
+            rounds=rounds,
+            allowed_feature_names=allowed_feature_names,
+        )
         _save_model(model, destination / "final_model.joblib")
         probabilities, expected = model.predict(test)
         records = prediction_records(_audit_records(test), probabilities, expected)
