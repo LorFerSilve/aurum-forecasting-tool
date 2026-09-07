@@ -41,6 +41,7 @@ from gold_forecasting.evaluation.walk_forward import (
 )
 from gold_forecasting.features import build_mvp_features
 from gold_forecasting.labels.multihorizon import build_horizon_labels
+from gold_forecasting.labels.mvp import LabelBuildResult
 from gold_forecasting.phase8.config import Phase8Config, load_phase8_config
 from gold_forecasting.phase8.reference import Phase7Reference, load_phase7_reference
 from gold_forecasting.phase8.sequences import (
@@ -341,6 +342,302 @@ def _fold_rows(
             f"phase-8 outer fold {fold.name} has empty required coverage"
         )
     return train, calibration, test
+
+
+_PHASE7_REQUIRED_METRICS: dict[str, tuple[str, ...]] = {
+    "macro_f1": ("mean", "worst"),
+    "brier": ("mean",),
+    "log_loss": ("mean",),
+    "return_mae_bps": ("mean",),
+    "net_bps": ("worst",),
+}
+
+
+def _validate_phase7_baseline_metrics(
+    baseline: dict[str, Any],
+    *,
+    horizon: int,
+) -> None:
+    """Fail before training if the frozen comparison artifact is malformed."""
+
+    for metric, fields in _PHASE7_REQUIRED_METRICS.items():
+        section = baseline.get(metric)
+        if not isinstance(section, dict):
+            raise ValueError(
+                f"phase-7 horizon {horizon} is missing aggregate metric {metric}"
+            )
+        for field in fields:
+            value = section.get(field)
+            if (
+                isinstance(value, bool)
+                or not isinstance(value, (int, float))
+                or not np.isfinite(float(value))
+            ):
+                raise ValueError(
+                    f"phase-7 horizon {horizon} has invalid {metric}.{field}"
+                )
+
+
+def _build_horizon_inputs(
+    anchor: pd.DataFrame,
+    minute_candles: pd.DataFrame,
+    sequence_store: Phase8SequenceBuildResult,
+    horizon: int,
+) -> tuple[pd.DataFrame, Phase8SequenceBuildResult, LabelBuildResult]:
+    """Build one horizon table once from the same immutable anchor index."""
+
+    label_result = build_horizon_labels(
+        minute_candles,
+        anchor,
+        horizon_minutes=horizon,
+    )
+    table = anchor.merge(
+        label_result.labels,
+        on=[
+            "instrument",
+            "source",
+            "prediction_time_utc",
+        ],
+        validate="one_to_one",
+    ).sort_values(
+        [
+            "instrument",
+            "source",
+            "prediction_time_utc",
+        ],
+        kind="stable",
+    )
+    table = table.reset_index(drop=True)
+    horizon_sequences = subset_phase8_sequences(
+        sequence_store,
+        table["_sequence_row"].to_numpy(dtype=np.int64),
+    )
+    table = table.drop(columns="_sequence_row")
+    table["sample_id"] = [
+        hashlib.sha256(
+            (
+                f"{instrument}|{source}|"
+                f"{stamp.isoformat()}|{horizon}"
+            ).encode()
+        ).hexdigest()
+        for instrument, source, stamp in table[
+            [
+                "instrument",
+                "source",
+                "prediction_time_utc",
+            ]
+        ].itertuples(index=False, name=None)
+    ]
+    validate_development_frame(table)
+    return table, horizon_sequences, label_result
+
+
+def _sequence_coverage(
+    sequences: Phase8SequenceBuildResult,
+    timeframes: tuple[str, ...],
+    *,
+    horizon: int,
+) -> tuple[np.ndarray, dict[str, float]]:
+    availability = np.column_stack(
+        [
+            sequences.by_timeframe[name].available
+            for name in timeframes
+        ]
+    ).astype(bool)
+    if (~availability).all(axis=1).any():
+        raise ValueError(
+            f"horizon {horizon} has rows with no available configured sequence"
+        )
+    coverage = {
+        name: float(sequences.by_timeframe[name].available.mean())
+        for name in timeframes
+    }
+    return availability, coverage
+
+
+def _runtime_smoke_check(
+    table: pd.DataFrame,
+    sequences: Phase8SequenceBuildResult,
+    fold: WalkForwardFold,
+    horizon: int,
+    timeframes: tuple[str, ...],
+    config: Phase8Config,
+    output: Path,
+) -> dict[str, Any]:
+    """Exercise real-data forward/backward/checkpoint paths before long training."""
+
+    inner = fold.inner_folds[0]
+    inner_train = select_block(
+        table,
+        inner.train,
+        gap_minutes=GAP_MINUTES,
+    )
+    if inner_train.empty:
+        raise ValueError(
+            f"phase-8 runtime smoke has no training rows for horizon {horizon}"
+        )
+    candidate_rows = _rows(inner_train)
+    availability = np.column_stack(
+        [
+            sequences.by_timeframe[name].available[candidate_rows]
+            for name in timeframes
+        ]
+    ).astype(bool)
+    complete_rows = candidate_rows[availability.all(axis=1)]
+    if len(complete_rows) < 32:
+        raise ValueError(
+            f"phase-8 runtime smoke lacks complete multi-timeframe rows for {horizon}m"
+        )
+    smoke_count = min(
+        len(complete_rows),
+        max(config.batch_size * 16, 32),
+    )
+    smoke_rows = complete_rows[-smoke_count:]
+    result = train_neural_model(
+        sequences,
+        table,
+        smoke_rows,
+        None,
+        timeframes,
+        config,
+        seed=config.seeds[0],
+        forced_epochs=1,
+    )
+    prediction_rows = smoke_rows[-min(len(smoke_rows), 512):]
+    prediction = predict_neural_model(
+        result,
+        sequences,
+        prediction_rows,
+        timeframes,
+        config,
+    )
+    checkpoint = (
+        output
+        / "preflight"
+        / f"horizon_{horizon}"
+        / "checkpoint.pt"
+    )
+    save_checkpoint(result, checkpoint)
+    probability_error = float(
+        np.max(
+            np.abs(
+                prediction.probabilities.sum(axis=1)
+                - 1.0
+            )
+        )
+    )
+    if probability_error > 1e-12:
+        raise ValueError(
+            "phase-8 runtime smoke produced imprecise probability normalization"
+        )
+    return {
+        "horizon": horizon,
+        "timeframes": list(timeframes),
+        "rows": len(smoke_rows),
+        "device": result.device,
+        "mixed_precision_used": result.mixed_precision_used,
+        "optimizer_steps": result.optimizer_steps,
+        "amp_skipped_steps": result.amp_skipped_steps,
+        "parameter_count": result.parameter_count,
+        "fit_seconds": result.fit_seconds,
+        "probability_sum_max_abs_error": probability_error,
+        "checkpoint": checkpoint.relative_to(output).as_posix(),
+    }
+
+
+def _preflight_phase8_runtime(
+    anchor: pd.DataFrame,
+    minute_candles: pd.DataFrame,
+    sequence_store: Phase8SequenceBuildResult,
+    folds: tuple[WalkForwardFold, ...],
+    config: Phase8Config,
+    reference: Phase7Reference,
+    output: Path,
+) -> dict[str, Any]:
+    """Validate every late-stage structural contract before expensive fitting."""
+
+    horizon_records: dict[str, Any] = {}
+    smoke_records: dict[str, Any] = {}
+    smoke_horizons = {
+        config.horizons[0],
+        config.horizons[-1],
+    }
+    for horizon in config.horizons:
+        print(f"Phase 8 preflight horizon {horizon} minutes", flush=True)
+        baseline = reference.aggregate_metrics(horizon)
+        _validate_phase7_baseline_metrics(
+            baseline,
+            horizon=horizon,
+        )
+        table, sequences, label_result = _build_horizon_inputs(
+            anchor,
+            minute_candles,
+            sequence_store,
+            horizon,
+        )
+        timeframes = config.horizon_timeframes[horizon]
+        _, coverage = _sequence_coverage(
+            sequences,
+            timeframes,
+            horizon=horizon,
+        )
+        fold_records: dict[str, Any] = {}
+        for fold in folds:
+            train, calibration, test = _fold_rows(table, fold)
+            for inner in fold.inner_folds:
+                inner_train = select_block(
+                    table,
+                    inner.train,
+                    gap_minutes=GAP_MINUTES,
+                )
+                validation = select_block(
+                    table,
+                    inner.validation,
+                    purge=False,
+                )
+                if inner_train.empty or validation.empty:
+                    raise ValueError(
+                        "phase-8 preflight found empty inner coverage: "
+                        f"{horizon}/{fold.name}/{inner.name}"
+                    )
+            actual_digest = sample_id_digest(test["sample_id"])
+            expected_digest = reference.test_digest(
+                horizon,
+                fold.name,
+            )
+            if actual_digest != expected_digest:
+                raise ValueError(
+                    "phase-8 preflight sample mismatch against phase 7: "
+                    f"{horizon}/{fold.name}"
+                )
+            fold_records[fold.name] = {
+                "train_rows": len(train),
+                "calibration_rows": len(calibration),
+                "test_rows": len(test),
+                "test_digest": actual_digest,
+            }
+        horizon_records[str(horizon)] = {
+            "label_candidates": label_result.candidate_count,
+            "label_eligible": label_result.output_row_count,
+            "sequence_coverage": coverage,
+            "folds": fold_records,
+        }
+        if horizon in smoke_horizons:
+            smoke_records[str(horizon)] = _runtime_smoke_check(
+                table,
+                sequences,
+                folds[0],
+                horizon,
+                timeframes,
+                config,
+                output,
+            )
+    return {
+        "reference_run": reference.champions.run_id,
+        "horizons": horizon_records,
+        "runtime_smoke": smoke_records,
+        "status": "passed",
+    }
 
 
 def _evaluate_fold(
@@ -851,71 +1148,41 @@ def run_phase8(
                 ],
             },
         )
+        print(
+            "Phase 8 structural and device preflight",
+            flush=True,
+        )
+        preflight = _preflight_phase8_runtime(
+            anchor,
+            candles["1min"],
+            sequence_store,
+            folds,
+            config,
+            reference,
+            output,
+        )
+        write_json_atomic(
+            output / "preflight.json",
+            preflight,
+        )
+        print(
+            "Phase 8 preflight passed; starting formal benchmark",
+            flush=True,
+        )
         results: dict[str, Any] = {}
         for horizon in config.horizons:
             print(
                 f"Phase 8 horizon {horizon} minutes",
                 flush=True,
             )
-            label_result = (
-                build_horizon_labels(
-                    candles["1min"],
+            table, horizon_sequences, label_result = (
+                _build_horizon_inputs(
                     anchor,
-                    horizon_minutes=horizon,
-                )
-            )
-            table = anchor.merge(
-                label_result.labels,
-                on=[
-                    "instrument",
-                    "source",
-                    "prediction_time_utc",
-                ],
-                validate="one_to_one",
-            ).sort_values(
-                [
-                    "instrument",
-                    "source",
-                    "prediction_time_utc",
-                ],
-                kind="stable",
-            )
-            table = table.reset_index(drop=True)
-            horizon_sequences = (
-                subset_phase8_sequences(
+                    candles["1min"],
                     sequence_store,
-                    table[
-                        "_sequence_row"
-                    ].to_numpy(
-                        dtype=np.int64
-                    ),
+                    horizon,
                 )
             )
-            table = table.drop(
-                columns="_sequence_row"
-            )
-            table["sample_id"] = [
-                hashlib.sha256(
-                    (
-                        f"{instrument}|{source}|"
-                        f"{stamp.isoformat()}|"
-                        f"{horizon}"
-                    ).encode()
-                ).hexdigest()
-                for instrument, source, stamp in (
-                    table[
-                        [
-                            "instrument",
-                            "source",
-                            "prediction_time_utc",
-                        ]
-                    ].itertuples(
-                        index=False,
-                        name=None,
-                    )
-                )
-            ]
-            validate_development_frame(table)
             horizon_directory = (
                 output
                 / f"horizon_{horizon}"
@@ -931,39 +1198,18 @@ def run_phase8(
                     horizon
                 ]
             )
-            availability = np.column_stack(
-                [
-                    horizon_sequences.by_timeframe[
-                        name
-                    ].available
-                    for name in selected_timeframes
-                ]
+            _, coverage = _sequence_coverage(
+                horizon_sequences,
+                selected_timeframes,
+                horizon=horizon,
             )
-            if (
-                (~availability)
-                .all(axis=1)
-                .any()
-            ):
-                raise ValueError(
-                    f"horizon {horizon} has rows "
-                    "with no available configured sequence"
-                )
             write_json_atomic(
                 horizon_directory
                 / "sequence_coverage.json",
                 {
                     "rows": len(table),
-                    "timeframes": list(
-                        selected_timeframes
-                    ),
-                    "available_fraction": {
-                        name: float(
-                            horizon_sequences.by_timeframe[
-                                name
-                            ].available.mean()
-                        )
-                        for name in selected_timeframes
-                    },
+                    "timeframes": list(selected_timeframes),
+                    "available_fraction": coverage,
                 },
             )
 
