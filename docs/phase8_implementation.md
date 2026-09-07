@@ -18,6 +18,7 @@
 - twee vooraf bevroren seeds en outer seed-ensemble;
 - CUDA auto-detectie en mixed precision op CUDA;
 - deterministische seed/configuratie;
+- synthetische intentional-overfit-, train-only-normalisatie- en same-seed CPU-tests;
 - exact outer sample-digestcontract tegen de bevroren phase-7 run;
 - hergebruik van de bestaande policy- en base/stress-backtestlogica;
 - per-seed histories, checkpoints, fusion weights, training/inferencetijden en metrics;
