@@ -169,7 +169,7 @@ def _render_summary(summary: dict[str, Any]) -> str:
     lines = [
         "# Phase 7 — richer price-only feature ablations",
         "",
-        f"Protocol: \`{summary['protocol']}\`",
+        f"Protocol: `{summary['protocol']}`",
         "",
         "The final holdout remains closed. Every ablation uses the same common causal",
         "feature universe, walk-forward folds, model-selection rules and execution costs.",
