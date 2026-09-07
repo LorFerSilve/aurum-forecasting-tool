@@ -92,7 +92,8 @@ Voor promotie moet minimaal worden gecontroleerd:
 - train-only preprocessing blijft intact;
 - featuredistributies worden per outer fold opgeslagen;
 - alle ablations gebruiken dezelfde sample IDs;
-- de finale holdout blijft gesloten.
+- de finale holdout blijft gesloten;
+- de formele benchmark draait alleen vanaf een schone, gecommitte Git-state.
 
 ## Interpretatie en promotie
 
