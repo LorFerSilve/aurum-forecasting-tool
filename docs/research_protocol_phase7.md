@@ -54,7 +54,7 @@ De vaste volgorde is:
    price-zscore en breakoutcontext op 3min;
 3. `price_session_3min` — voegt vaste UTC-sessie- en kalendercontext toe;
 4. `price_session_regime_3min` — voegt causale volatility-, trend- en shockregimes toe;
-5. `price_session_regime_multitimeframe` — voegt 5min, 15min, 30min, 1h en 3h toe.
+5. `price_session_regime_multitimeframe` — voegt 1min, 5min, 15min, 30min, 1h en 3h toe.
 
 Lookbacks worden per timeframe begrensd. Vooral voor 1h/3h voorkomt dit dat de
 observed-row kalender na ieder weekend vrijwel de hele volgende week als
