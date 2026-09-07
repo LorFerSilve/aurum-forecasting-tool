@@ -7,7 +7,7 @@
 ## Wat is geïmplementeerd
 
 - Afzonderlijke phase-7 featurebuilder; de MVP-builder blijft ongewijzigd.
-- Causale multi-timeframe alignment voor `3min`, `5min`, `15min`, `30min`,
+- Causale multi-timeframe alignment voor `1min`, `3min`, `5min`, `15min`, `30min`,
   `1h` en `3h`.
 - Per-timeframe returns/lags, candle geometry, momentum, realized volatility,
   distance-to-SMA, price z-score en breakoutpositie.
