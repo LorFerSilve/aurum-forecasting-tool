@@ -89,12 +89,17 @@ class Phase7Reference:
                 f"phase-7 fold summary has no split record: {horizon}/{fold_name}"
             )
         digest = split.get("test_digest")
-        if not isinstance(digest, str) or len(digest) != 64:
+        if not isinstance(digest, str) or not digest.startswith("sha256:"):
+            raise Phase8ReferenceError(
+                f"phase-7 fold summary has invalid test digest: {horizon}/{fold_name}"
+            )
+        hexadecimal = digest.removeprefix("sha256:")
+        if len(hexadecimal) != 64:
             raise Phase8ReferenceError(
                 f"phase-7 fold summary has invalid test digest: {horizon}/{fold_name}"
             )
         try:
-            int(digest, 16)
+            int(hexadecimal, 16)
         except ValueError as exc:
             raise Phase8ReferenceError(
                 f"phase-7 test digest is not hexadecimal: {horizon}/{fold_name}"
