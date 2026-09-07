@@ -4,7 +4,7 @@ data_config: phase5.yaml
 features_config: features_phase7.yaml
 horizons: [3, 6, 9, 12, 15, 30, 60, 180]
 test_years: [2022, 2023, 2024]
-seed: 20260907
+seed: 20260906
 xgb_max_rounds: 120
 xgb_early_stopping_rounds: 10
 minimum_policy_trades: 20
