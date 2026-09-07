@@ -174,6 +174,13 @@ def test_tiny_direction_dataset_overfits_and_same_seed_reproduces() -> None:
         np.mean(first_prediction.probabilities.argmax(axis=1) == labels)
     )
     assert accuracy >= 0.95
+    np.testing.assert_allclose(
+        first_prediction.probabilities.sum(axis=1),
+        1.0,
+        rtol=0.0,
+        atol=1e-12,
+    )
+    assert first_prediction.probabilities.dtype == np.float64
     assert first.parameter_count <= config.parameter_budget
     assert all(
         np.isfinite(float(epoch["max_preclip_gradient_norm"]))

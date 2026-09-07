@@ -270,7 +270,8 @@ def _predict_batches(
                 ),
             )
             probabilities = torch.softmax(
-                output.direction_logits, dim=1
+                output.direction_logits.to(dtype=torch.float64),
+                dim=1,
             ).cpu().numpy()
             all_probabilities.append(probabilities)
             all_returns.append(output.normalized_return.cpu().numpy())
