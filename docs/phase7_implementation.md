@@ -55,28 +55,34 @@ calendar is. De huidige sessievelden zijn expliciet vaste UTC-vensters.
 
 Alle vijf varianten worden op exact dezelfde sample IDs per horizon/fold geëvalueerd.
 
-## Lokale eindverificatie
+## Empirische eindverificatie
 
-De Git-repository bevat bewust niet de grote raw/curated marktbestanden. Daarom moet
-de empirische gate op de machine met de geharde fase-5-data worden uitgevoerd:
+De formele lokale run `20260907T014255645674Z-b2afe281` op commit
+`3f0a703568224fe9169b1e9f8d61dad131f0005b` eindigde met status `succeeded`.
+`phase7 validate` controleerde 11.311 artifacts en accepteerde completion-versie
+`sha256:beac58092d06350bb067fbd2df144bb9cb2507f45953c19487474c87d0ceca0f`.
+De finale holdout bleef gesloten.
 
-```powershell
-.\.venv\Scripts\python.exe -m pytest
-.\.venv\Scripts\python.exe -m ruff check src tests
-.\.venv\Scripts\python.exe -m mypy src/gold_forecasting
-.\.venv\Scripts\gold-forecast.exe data validate --config configs/phase5.yaml
-.\.venv\Scripts\gold-forecast.exe phase7 run --config configs/phase7.yaml
-```
+De bevroren research-featurekeuzes zijn:
 
-Na voltooiing:
+- 3m: `price_session_regime_multitimeframe`;
+- 6m: `price_session_regime_3min`;
+- 9m: `price_session_regime_multitimeframe`;
+- 12m: `price_session_regime_multitimeframe`;
+- 15m: `mvp`;
+- 30m: `price_session_regime_multitimeframe`;
+- 60m: `price_3min`;
+- 180m: `price_3min`.
 
-```powershell
-.\.venv\Scripts\gold-forecast.exe phase7 validate reports/phase7_runs/<run-id>
-```
+De vaste-reference attributiecontrole kiest op alle horizons dezelfde featurevariant
+als de pipeline researchchampion. Het sterkste consistente bewijs ligt op 3m, 30m
+en 60m. Op 6m, 9m, 12m en 180m zijn de formele gains kleiner en gemengd over folds;
+15m behoudt de MVP-features.
 
-Pas daarna mogen de phase-7 exitcriteria worden afgesloten en kan `v0.2` worden
-bevroren. Een uitkomst `keep_mvp_features` is geldig; er hoeft geen complexere
-featuregroep te winnen.
+Er zijn 0 economic promotion candidates. Alle getrainde model-families selecteerden
+cash/no-trade. Fase 7 sluit daarom af als betrouwbare price-only researchbenchmark
+zonder tradingchampion. Zie `docs/phase7_verification.md` en
+`docs/model_card_v0.2.md`.
 
 ## Promotielogica
 
