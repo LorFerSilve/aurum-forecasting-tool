@@ -51,7 +51,7 @@ class Phase7FeatureConfig(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     schema_version: Literal[1] = 1
-    feature_protocol: Literal["phase7-v1"] = "phase7-v1"
+    feature_protocol: Literal["phase7-v2"] = "phase7-v2"
     anchor_timeframe: Literal["3min"] = "3min"
     timeframe_windows: dict[str, tuple[int, ...]]
     return_lags: tuple[int, ...] = (1, 2, 3)
@@ -106,7 +106,7 @@ class Phase7FeatureCatalog(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     schema_version: Literal[1] = 1
-    feature_protocol: Literal["phase7-v1"] = "phase7-v1"
+    feature_protocol: Literal["phase7-v2"] = "phase7-v2"
     feature_spec_version: str = Field(pattern=r"^sha256:[0-9a-f]{64}$")
     anchor_timeframe: Literal["3min"] = "3min"
     definitions: tuple[Phase7FeatureDefinition, ...]
