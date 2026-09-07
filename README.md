@@ -62,7 +62,7 @@ ontbrekende minuten niet aantoonbaar door een vertrouwde marktkalender worden ve
 Het kwaliteitsrapport markeert deze beperking expliciet. De modelinput blijft `3min`.
 Zie het [fase-5-datacontract](docs/data_contract_phase5.md) voor de precieze regels.
 
-De afzonderlijke fase-6-benchmark (afgerond; fase 7 volgt) gebruikt dezelfde data en features:
+De afzonderlijke fase-6-benchmark (afgerond) gebruikt dezelfde data en MVP-features:
 
 ```powershell
 .\.venv\Scripts\gold-forecast.exe benchmark run --config configs/benchmark.yaml
@@ -79,6 +79,31 @@ Zie het [fase-6-protocol](docs/research_protocol_phase6.md) voor het vooraf vast
 de holdoutbeveiliging, kosten, no-tradefallback en promotiecriteria.
 De interpretatie en reproduceerbaarheidsgrens staan in het [fase-6-verificatierapport](docs/phase6_verification.md)
 en de [model card](docs/model_card_phase6.md).
+
+### Fase 7 — richer price-only feature ablations
+
+Fase 7 is als afzonderlijke challengerlaag geïmplementeerd. De bevroren MVP-featurebuilder
+en fase-6-resultaten worden niet overschreven. De nieuwe laag bouwt een gemeenschappelijk
+causaal sample-universe met rijkere 3min-pricefeatures, vaste UTC-sessiecontext,
+volatility/trend/shock-regimes en gesloten candles uit `5min`, `15min`, `30min`,
+`1h` en `3h`.
+
+```powershell
+.\.venv\Scripts\gold-forecast.exe phase7 run --config configs/phase7.yaml
+.\.venv\Scripts\gold-forecast.exe phase7 validate reports/phase7_runs/<run-id>
+```
+
+De cumulatieve ablations zijn `mvp`, `price_3min`, `price_session_3min`,
+`price_session_regime_3min` en `price_session_regime_multitimeframe`. Iedere variant
+gebruikt dezelfde toegelaten timestamps, walk-forward-folds, modelselectie en kosten.
+Per fold worden ook featuredistributies opgeslagen. De run downloadt niets en vereist
+dat de geharde 2020–2024-data lokaal aanwezig en geldig is.
+
+Microstructure-features worden bewust niet nagebootst: HistData levert in dit project
+bid-only OHLC zonder betrouwbare historische ask, spread of tick count. De finale holdout
+vanaf 2025-01-01 blijft gesloten en probabilities blijven ongekalibreerd. Zie het
+[fase-7-protocol](docs/research_protocol_phase7.md) en de
+[implementatiestatus](docs/phase7_implementation.md).
 
 `data import` downloadt uitsluitend de uit `configs/splits_mvp.yaml` afgeleide
 ontwikkelingsjaren. Ruwe bronbestanden en afgeleide datasets worden lokaal gehouden en zijn
