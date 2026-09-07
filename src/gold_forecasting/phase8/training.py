@@ -10,7 +10,7 @@ import time
 from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -125,9 +125,8 @@ def seed_everything(seed: int, *, deterministic: bool) -> None:
         torch.cuda.manual_seed_all(seed)
     if deterministic:
         torch.use_deterministic_algorithms(True)
-        if torch.backends.cudnn.is_available():
-            torch.backends.cudnn.benchmark = False
-            torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+        torch.backends.cudnn.deterministic = True
 
 
 def fit_normalizer(
@@ -447,7 +446,7 @@ def train_neural_model(
                 )
             if not torch.isfinite(loss):
                 raise Phase8TrainingError("training loss became non-finite")
-            scaler.scale(loss).backward()
+            torch.autograd.backward(cast(Tensor, scaler.scale(loss)))
             scaler.unscale_(optimizer)
             gradient_norm = float(
                 torch.nn.utils.clip_grad_norm_(

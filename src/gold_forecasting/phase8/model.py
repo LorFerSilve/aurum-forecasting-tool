@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Final
+from typing import Final, cast
 
 import torch
 from torch import Tensor, nn
@@ -25,7 +25,7 @@ class GRUEncoder(nn.Module):
     def forward(self, values: Tensor) -> Tensor:
         output, hidden = self.gru(values)
         del output
-        return self.norm(hidden[-1])
+        return cast(Tensor, self.norm(hidden[-1]))
 
 
 @dataclass(frozen=True, slots=True)

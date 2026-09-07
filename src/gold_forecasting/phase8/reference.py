@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -64,7 +64,15 @@ class Phase7Reference:
             / "variant_summary.json"
         )
         payload = _verified_json(path, self.root, self.completion)
-        return payload["models"][champion.family]
+        models = payload.get("models")
+        if not isinstance(models, dict):
+            raise Phase8ReferenceError("phase-7 variant summary has no model mapping")
+        metrics = models.get(champion.family)
+        if not isinstance(metrics, dict):
+            raise Phase8ReferenceError(
+                f"phase-7 variant summary has no metrics for {champion.family}"
+            )
+        return cast(dict[str, Any], metrics)
 
     def test_digest(self, horizon: int, fold_name: str) -> str:
         path = (
@@ -84,9 +92,14 @@ def _completion_entry(
     path: Path,
 ) -> dict[str, Any]:
     relative = path.relative_to(root).as_posix()
-    for entry in completion.get("files", []):
+    files = completion.get("files")
+    if not isinstance(files, list):
+        raise Phase8ReferenceError("phase-7 completion manifest has no file list")
+    for entry in files:
+        if not isinstance(entry, dict):
+            raise Phase8ReferenceError("phase-7 completion manifest has an invalid file entry")
         if entry.get("path") == relative:
-            return entry
+            return cast(dict[str, Any], entry)
     raise Phase8ReferenceError(
         f"phase-7 completion manifest does not cover {relative}"
     )
