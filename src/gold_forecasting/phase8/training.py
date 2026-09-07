@@ -101,6 +101,8 @@ class TrainingResult:
     parameter_count: int
     device: str
     mixed_precision_used: bool
+    optimizer_steps: int
+    amp_skipped_steps: int
     fit_seconds: float
 
 
@@ -232,6 +234,20 @@ def _macro_f1(probabilities: np.ndarray, labels: np.ndarray) -> float:
     )
 
 
+def _gradients_are_finite(model: MultiTimeframeGRU) -> bool:
+    """Check unscaled gradients before clipping without mutating them."""
+
+    gradients = [
+        parameter.grad
+        for parameter in model.parameters()
+        if parameter.grad is not None
+    ]
+    return bool(
+        gradients
+        and all(torch.isfinite(gradient).all().item() for gradient in gradients)
+    )
+
+
 def _predict_batches(
     model: MultiTimeframeGRU,
     normalizer: SequenceNormalizer,
@@ -357,12 +373,16 @@ def train_neural_model(
     best_f1 = -math.inf
     best_epoch = 0
     stale_epochs = 0
+    optimizer_steps = 0
+    amp_skipped_steps = 0
     started = time.perf_counter()
     for epoch in range(1, max_epochs + 1):
         model.train()
         epoch_loss = 0.0
         samples = 0
         max_gradient_norm = 0.0
+        epoch_optimizer_steps = 0
+        epoch_amp_skipped_steps = 0
         for batch in _batch_indices(
             train_rows,
             config.batch_size,
@@ -449,20 +469,42 @@ def train_neural_model(
                 raise Phase8TrainingError("training loss became non-finite")
             torch.autograd.backward(scaler.scale(loss))
             scaler.unscale_(optimizer)
+            if not _gradients_are_finite(model):
+                if not use_amp:
+                    raise Phase8TrainingError(
+                        "unscaled full-precision gradients became non-finite"
+                    )
+                # AMP overflow is recoverable: GradScaler records the inf/NaN
+                # during unscale_, skips this optimizer update, and lowers its
+                # scale on update(). Do not clip the non-finite gradients first,
+                # because inf * 0 can itself create NaNs.
+                scaler.step(optimizer)
+                scaler.update()
+                optimizer.zero_grad(set_to_none=True)
+                amp_skipped_steps += 1
+                epoch_amp_skipped_steps += 1
+                epoch_loss += float(loss.detach().cpu()) * len(batch)
+                samples += len(batch)
+                continue
             gradient_norm = float(
                 torch.nn.utils.clip_grad_norm_(
                     model.parameters(),
                     config.gradient_clip_norm,
+                    error_if_nonfinite=True,
                 )
             )
             if not math.isfinite(gradient_norm):
-                raise Phase8TrainingError("gradient norm became non-finite")
+                raise Phase8TrainingError(
+                    "finite gradients produced a non-finite gradient norm"
+                )
             max_gradient_norm = max(
                 max_gradient_norm,
                 gradient_norm,
             )
             scaler.step(optimizer)
             scaler.update()
+            optimizer_steps += 1
+            epoch_optimizer_steps += 1
             epoch_loss += float(loss.detach().cpu()) * len(batch)
             samples += len(batch)
 
@@ -470,6 +512,8 @@ def train_neural_model(
             "epoch": epoch,
             "train_loss": epoch_loss / max(samples, 1),
             "max_preclip_gradient_norm": max_gradient_norm,
+            "optimizer_steps": epoch_optimizer_steps,
+            "amp_skipped_steps": epoch_amp_skipped_steps,
         }
         if forced_epochs is not None:
             history.append(record)
@@ -504,6 +548,10 @@ def train_neural_model(
             stale_epochs += 1
             if stale_epochs >= config.early_stopping_patience:
                 break
+    if optimizer_steps < 1:
+        raise Phase8TrainingError(
+            "training completed without a single finite optimizer update"
+        )
     if best_state is None or best_epoch < 1:
         raise Phase8TrainingError("training produced no valid checkpoint")
     model.load_state_dict(best_state)
@@ -515,6 +563,8 @@ def train_neural_model(
         parameter_count=model.parameter_count,
         device=str(device),
         mixed_precision_used=use_amp,
+        optimizer_steps=optimizer_steps,
+        amp_skipped_steps=amp_skipped_steps,
         fit_seconds=time.perf_counter() - started,
     )
 
