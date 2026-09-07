@@ -85,7 +85,7 @@ en de [model card](docs/model_card_phase6.md).
 Fase 7 is als afzonderlijke challengerlaag geïmplementeerd. De bevroren MVP-featurebuilder
 en fase-6-resultaten worden niet overschreven. De nieuwe laag bouwt een gemeenschappelijk
 causaal sample-universe met rijkere 3min-pricefeatures, vaste UTC-sessiecontext,
-volatility/trend/shock-regimes en gesloten candles uit `5min`, `15min`, `30min`,
+volatility/trend/shock-regimes en gesloten candles uit `1min`, `5min`, `15min`, `30min`,
 `1h` en `3h`.
 
 ```powershell
