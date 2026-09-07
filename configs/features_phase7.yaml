@@ -6,6 +6,7 @@ anchor_timeframe: 3min
 # observed-row calendar policy, long contiguous 3h windows would discard most
 # of every week after the weekend gap.
 timeframe_windows:
+  1min: [2, 5, 10, 20]
   3min: [2, 5, 10, 20]
   5min: [2, 5, 10, 20]
   15min: [2, 4, 8, 16]
