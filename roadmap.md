@@ -26,10 +26,10 @@ Daarna vervangen of versterken we telkens één onderdeel. Na iedere fase blijft
 | Onderdeel | Huidige status |
 |---|---|
 | Systeemontwerp | Afgerond in `project_idea.md` |
-| Roadmap | Fasen 0–6 geverifieerd; fase-7-implementatie gereed, empirische benchmark nog vereist |
-| Implementatie | Research-MVP, geharde datalaag, fase-6-benchmark en fase-7 challengerlaag aanwezig |
-| Huidige release | `v0.1.0`; `v0.2` vereist nog de volledige fase-7-run en promotiebeslissing |
-| Eerstvolgende stap | Volledige fase-7-ablationbenchmark uitvoeren en verifiëren |
+| Roadmap | Fasen 0–7 geverifieerd; fase 8 is de eerstvolgende ontwikkelfase |
+| Implementatie | `v0.2` researchbenchmark met geharde data, fase-6 evaluatiekader en geverifieerde fase-7 featureselectie |
+| Huidige release | `v0.2.0` — betrouwbare price-only researchbenchmark |
+| Eerstvolgende stap | Fase 8: compact multi-timeframe neuraal kernmodel |
 | Standaard einddoel | Professioneel paper-trading-systeem |
 | Echte orders | Afzonderlijke, optionele laatste fase |
 
@@ -874,17 +874,33 @@ Na iedere stap:
 MVP-geankerde timestamps voor alle ablations aan en behandelt sparse rijkere features
 via train-only mediaanimputatie; v1 leverde geen voltooide benchmarkbeslissing op.
 
-De featurebuilder, gemeenschappelijke ablation-universe, CLI, auditcatalogus, distributierapportage
-en leakage/parity-tests zijn geïmplementeerd. De volledige benchmark kan niet uit GitHub alleen
-worden afgerond omdat raw/curated marktdata bewust niet in versiebeheer staan. De onderstaande
-exitcriteria blijven daarom open tot een geslaagde lokale `phase7 run` en verificatie.
+De featurebuilder, gemeenschappelijke ablation-universe, CLI, auditcatalogus,
+distributierapportage en leakage/parity-tests zijn geïmplementeerd.
+
+### Verificatie en besluit — 2026-09-07
+
+De formele `phase7-v2`-run `20260907T014255645674Z-b2afe281` is geslaagd op commit
+`3f0a703568224fe9169b1e9f8d61dad131f0005b`. De run duurde 7u49m20s; de daaropvolgende
+validator controleerde 11.311 artifacts. De finale holdout bleef gesloten.
+
+De feature-isolerende vaste-referencecontrole kiest op alle acht horizons dezelfde
+featurevariant als de pipeline researchchampion: full multi-timeframe op 3/9/12/30m,
+3min+session+regime op 6m, MVP op 15m en uitgebreid 3min op 60/180m. Het sterkste
+consistente bewijs zit op 3m, 30m en 60m, waar macro-F1 in alle drie outer jaren stijgt.
+Op 6/9/12/180m worden de formele gates gehaald maar zijn de delta's klein en gemengd.
+
+Er zijn **0 economic promotion candidates**; alle getrainde model-families selecteren
+cash/no-trade. `v0.2.0` is daarom een bevroren betrouwbare researchbenchmark, geen
+paper- of live-tradingchampion. Zie
+[phase7_verification.md](docs/phase7_verification.md) en
+[model_card_v0.2.md](docs/model_card_v0.2.md).
 
 ### Exitcriteria
 
-- Iedere feature heeft formule, timeframe, lookback en availability time.
-- Geen feature gebruikt toekomstige data.
-- `v0.2` verslaat of verstevigt `v0.1` op meerdere folds, of blijft bewust eenvoudiger wanneer extra features niets toevoegen.
-- De beste price-only champion wordt bevroren als fallback voor alle volgende fasen.
+- [x] Iedere feature heeft formule, timeframe, lookback en availability time.
+- [x] Geen feature gebruikt toekomstige data.
+- [x] `v0.2` verslaat of verstevigt `v0.1` op meerdere folds, of blijft bewust eenvoudiger wanneer extra features niets toevoegen.
+- [x] De beste price-only researchchampion is per horizon bevroren als fallback voor alle volgende fasen.
 
 ---
 

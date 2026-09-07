@@ -4,12 +4,12 @@
 
 ## Status
 
-`phase7-v2` vervangt de niet-voltooide `phase7-v2`-implementatie nadat een pre-benchmark
+`phase7-v2` vervangt de niet-voltooide `phase7-v1`-implementatie nadat een pre-benchmark
 coveragefout aantoonde dat de doorsnede van alle hogere-timeframefeatures een geldige
 inner fold volledig kon leegtrekken. Er was geen voltooide phase-7-benchmark en er is
 geen resultaat gebruikt om deze wijziging te kiezen.
 
-Dit protocol is een ontwikkelingscontract voor fase 7. De finale holdout vanaf
+Dit protocol is het bevroren ontwikkelingscontract dat voor de geslaagde fase-7-run is gebruikt. De finale holdout vanaf
 2025-01-01 UTC blijft gesloten. Fase 7 mag uitsluitend de reeds toegelaten
 ontwikkelingsperiode 2020–2024 gebruiken.
 
