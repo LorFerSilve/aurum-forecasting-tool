@@ -22,8 +22,8 @@ from gold_forecasting.config import FeaturesConfig, _load_yaml_mapping
 from gold_forecasting.features.mvp import FEATURE_METADATA_COLUMNS, build_mvp_features
 from gold_forecasting.validation import CandleValidationError, validate_candles
 
-_ALLOWED_TIMEFRAMES = ("3min", "5min", "15min", "30min", "1h", "3h")
-_TIMEFRAME_MINUTES = {"3min": 3, "5min": 5, "15min": 15, "30min": 30, "1h": 60, "3h": 180}
+_ALLOWED_TIMEFRAMES = ("1min", "3min", "5min", "15min", "30min", "1h", "3h")
+_TIMEFRAME_MINUTES = {"1min": 1, "3min": 3, "5min": 5, "15min": 15, "30min": 30, "1h": 60, "3h": 180}
 _VARIANT_ORDER = (
     "mvp",
     "price_3min",
