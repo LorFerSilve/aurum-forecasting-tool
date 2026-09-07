@@ -12,12 +12,14 @@ data_app = typer.Typer(help="Import and validate market data.")
 dataset_app = typer.Typer(help="Build leakage-safe model datasets.")
 mvp_app = typer.Typer(help="Run the vertical research MVP.")
 benchmark_app = typer.Typer(help="Run the guarded phase-6 multi-horizon benchmark.")
+phase7_app = typer.Typer(help="Run phase-7 richer price-only feature ablations.")
 
 app.add_typer(config_app, name="config")
 app.add_typer(data_app, name="data")
 app.add_typer(dataset_app, name="dataset")
 app.add_typer(mvp_app, name="mvp")
 app.add_typer(benchmark_app, name="benchmark")
+app.add_typer(phase7_app, name="phase7")
 
 ConfigOption = Annotated[
     Path,
@@ -32,6 +34,24 @@ YearsOption = Annotated[
     typer.Option(help="Optional comma-separated development years, for example 2023,2024."),
 ]
 
+
+@phase7_app.command("run")
+def run_phase7_research(config: ConfigOption = Path("configs/phase7.yaml")) -> None:
+    """Run guarded richer-feature ablations on the phase-6 evaluation contract."""
+    from gold_forecasting.phase7.pipeline import run_phase7
+
+    output = run_phase7(config)
+    typer.echo(f"Completed phase 7: {output}")
+
+
+@phase7_app.command("validate")
+def validate_phase7_research(
+    run_directory: Annotated[Path, typer.Argument(exists=True, file_okay=False)],
+) -> None:
+    """Verify a completed phase-7 run and all persisted artifact hashes."""
+    from gold_forecasting.phase7.pipeline import verify_phase7
+
+    typer.echo(json.dumps(verify_phase7(run_directory), indent=2))
 
 @benchmark_app.command("run")
 def run_phase6_benchmark(config: ConfigOption = Path("configs/benchmark.yaml")) -> None:

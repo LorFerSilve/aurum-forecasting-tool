@@ -1,21 +1,18 @@
 # Gold Forecasting
 
-Een reproduceerbare, leakage-bewuste onderzoekspipeline voor XAU/USD. Release `v0.1.0`
-implementeert de volledige research-MVP: publieke historische data, validatie, resampling,
-causale features, labels, chronologische splits, modelselectie, voorspelling, evaluatie en een
-eenvoudige kostenbewuste backtest.
+Een reproduceerbare, leakage-bewuste onderzoekspipeline voor XAU/USD. Release `v0.2.0`
+bevat de volledige research-MVP plus de geharde datalaag, het strengere fase-6
+walk-forwardkader en de geverifieerde fase-7 price-only feature-ablation.
 
-Fase 5 voegt een apart gehard dataprofiel toe met hervatbare acquisitie, geversioneerde
-bronmetadata, acht afgeleide timeframes en dagelijkse kwaliteitsrapporten. De huidige
-release blijft `v0.1.0`; `v0.2` volgt pas na fasen 6–7.
+De huidige scope gebruikt HistData bid-only `1min`-candles uit 2020–2024 en causale
+afgeleide timeframes tot `3h`. De betrouwbare researchbenchmark evalueert acht horizons
+van 3 tot 180 minuten. Per horizon is een price-only researchchampion bevroren; de
+15-minutenhorizon behoudt bewust het eenvoudige MVP-featureschema.
 
-De huidige scope gebruikt HistData bid-only `1min`-candles uit 2020–2024, afgeleide `3min`-
-en `15min`-candles, achttien eenvoudige price-only features en een 15-minutenrichting
-(`down`, `neutral`, `up`). De broker-/databron zit achter een vervangbare provideradapter.
-
-> Dit is researchsoftware. De eerste echte backtest is negatief en de probabilities zijn
-> voorlopig en ongekalibreerd. De release is niet geschikt voor paper trading, echte orders
-> of rendementsclaims.
+> Dit is researchsoftware. Fase 7 vond predictive verbeteringen op meerdere development
+> folds, maar **geen economic promotion candidate**. Alle getrainde model-families selecteerden
+> cash/no-trade. Probabilities zijn nog ongekalibreerd en `v0.2.0` is niet geschikt voor
+> paper trading, echte orders of rendementsclaims.
 
 ## Ontwikkelomgeving
 
@@ -62,7 +59,7 @@ ontbrekende minuten niet aantoonbaar door een vertrouwde marktkalender worden ve
 Het kwaliteitsrapport markeert deze beperking expliciet. De modelinput blijft `3min`.
 Zie het [fase-5-datacontract](docs/data_contract_phase5.md) voor de precieze regels.
 
-De afzonderlijke fase-6-benchmark (afgerond; fase 7 volgt) gebruikt dezelfde data en features:
+De afzonderlijke fase-6-benchmark (afgerond) gebruikt dezelfde data en MVP-features:
 
 ```powershell
 .\.venv\Scripts\gold-forecast.exe benchmark run --config configs/benchmark.yaml
@@ -79,6 +76,39 @@ Zie het [fase-6-protocol](docs/research_protocol_phase6.md) voor het vooraf vast
 de holdoutbeveiliging, kosten, no-tradefallback en promotiecriteria.
 De interpretatie en reproduceerbaarheidsgrens staan in het [fase-6-verificatierapport](docs/phase6_verification.md)
 en de [model card](docs/model_card_phase6.md).
+
+### Fase 7 — richer price-only feature ablations
+
+Fase 7 is als afzonderlijke challengerlaag geïmplementeerd. De bevroren MVP-featurebuilder
+en fase-6-resultaten worden niet overschreven. De nieuwe laag gebruikt één
+MVP-geankerd causaal sample-universe met rijkere 3min-pricefeatures, vaste
+UTC-sessiecontext, volatility/trend/shock-regimes en gesloten candles uit `1min`,
+`5min`, `15min`, `30min`, `1h` en `3h`. Sparse hogere-timeframewaarden blijven
+expliciet missing en worden uitsluitend met train-only mediaanimputatie behandeld.
+
+```powershell
+.\.venv\Scripts\gold-forecast.exe phase7 run --config configs/phase7.yaml
+.\.venv\Scripts\gold-forecast.exe phase7 validate reports/phase7_runs/<run-id>
+```
+
+De cumulatieve ablations zijn `mvp`, `price_3min`, `price_session_3min`,
+`price_session_regime_3min` en `price_session_regime_multitimeframe`. Iedere variant
+gebruikt dezelfde toegelaten timestamps, walk-forward-folds, modelselectie en kosten.
+Per fold worden ook featuredistributies en missing coverage opgeslagen. De fase-6
+feature-allowlist blijft frozen; fase 7 gebruikt uitsluitend zijn eigen gehashte catalogus.
+De run downloadt niets en vereist
+dat de geharde 2020–2024-data lokaal aanwezig en geldig is.
+
+Microstructure-features worden bewust niet nagebootst: HistData levert in dit project
+bid-only OHLC zonder betrouwbare historische ask, spread of tick count. De formele
+`phase7-v2`-run `20260907T014255645674Z-b2afe281` is geslaagd en 11.311 artifacts zijn
+daarna integraal gevalideerd. Er zijn predictive featureverbeteringen op meerdere horizons,
+maar 0 economic promotion candidates. De finale holdout vanaf 2025-01-01 blijft gesloten
+en probabilities blijven ongekalibreerd. Zie het
+[fase-7-protocol](docs/research_protocol_phase7.md), het
+[verificatierapport](docs/phase7_verification.md), de
+[implementatiestatus](docs/phase7_implementation.md) en de
+[v0.2-model card](docs/model_card_v0.2.md).
 
 `data import` downloadt uitsluitend de uit `configs/splits_mvp.yaml` afgeleide
 ontwikkelingsjaren. Ruwe bronbestanden en afgeleide datasets worden lokaal gehouden en zijn
@@ -105,5 +135,5 @@ De volledige run schrijft:
 ```
 
 Zie [het onderzoeksprotocol](docs/research_protocol.md) voor de vooraf bevroren tijds-, label-,
-kosten- en splitregels, [de model card](docs/model_card_v0.1.md) voor resultaten en beperkingen,
+kosten- en splitregels, [de v0.2-model card](docs/model_card_v0.2.md) voor resultaten en beperkingen,
 en [de roadmap](roadmap.md) voor de gefaseerde vervolgstappen.

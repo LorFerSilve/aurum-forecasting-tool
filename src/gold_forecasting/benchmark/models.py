@@ -177,6 +177,7 @@ def fit_model(
     *,
     validation: pd.DataFrame | None = None,
     rounds: int | None = None,
+    allowed_feature_names: frozenset[str] | None = None,
 ) -> FittedModel:
     """Fit development rows with train-only transforms and target statistics.
 
@@ -189,8 +190,16 @@ def fit_model(
         raise ValueError("training requires nonempty coverage of all three target classes")
     if not feature_names or len(feature_names) != len(set(feature_names)):
         raise ValueError("feature names must be nonempty and unique")
-    if not set(feature_names).issubset(ALLOWED_FEATURE_NAMES):
-        raise ValueError("feature names must belong to the frozen causal MVP allowlist")
+    allowed = ALLOWED_FEATURE_NAMES if allowed_feature_names is None else allowed_feature_names
+    if not allowed or any(not isinstance(name, str) or not name for name in allowed):
+        raise ValueError("allowed feature catalog must contain non-empty string names")
+    if not set(feature_names).issubset(allowed):
+        scope = (
+            "frozen causal MVP allowlist"
+            if allowed_feature_names is None
+            else "explicit causal feature catalog"
+        )
+        raise ValueError(f"feature names must belong to the {scope}")
     if "split" in train and not train["split"].eq("train").all():
         raise ValueError("training input contains rows explicitly marked as another split")
     if validation is not None:

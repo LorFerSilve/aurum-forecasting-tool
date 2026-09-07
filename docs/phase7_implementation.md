@@ -1,0 +1,97 @@
+# Fase 7 — implementatiestatus
+
+**Protocol:** `phase7-v2`  
+**Release:** `v0.2.0`  
+**Empirische status:** volledige 2020–2024 ablationbenchmark uitgevoerd en gevalideerd
+
+`phase7-v1` heeft geen geldige eindrun opgeleverd. Tijdens de eerste lokale benchmark
+werd een lege inner fold ontdekt doordat sparse hogere-timeframefeatures de common
+sample-universe te sterk reduceerden. Dit is vóór resultaatselectie gecorrigeerd en
+formeel geversioneerd als `phase7-v2`.
+
+## Wat is geïmplementeerd
+
+- Afzonderlijke phase-7 featurebuilder; de MVP-builder blijft ongewijzigd.
+- Causale multi-timeframe alignment voor `1min`, `3min`, `5min`, `15min`, `30min`,
+  `1h` en `3h`.
+- Per-timeframe returns/lags, candle geometry, momentum, realized volatility,
+  distance-to-SMA, price z-score en breakoutpositie.
+- Vaste UTC-sessievelden, sessie-overlap, maand- en minute-of-hour-cycli.
+- Causale volatility buckets, trend score en shock score.
+- Stalenessguard: een oudere hogere-timeframe candle wordt niet onbeperkt over
+  datagaten vooruit gedragen.
+- Gemeenschappelijk MVP-geankerd sample-universe voor alle ablations; sparse
+  hogere-timeframefeatures verwijderen geen prediction rows.
+- Missing phase-7 featurewaarden worden uitsluitend met de bestaande train-only
+  mediaan-imputer behandeld; geen forward/backfill of outer-statistiek.
+- Cumulatieve ablations van MVP tot volledige multi-timeframe variant.
+- Hergebruik van de fase-6 nested walk-forward-, preprocessing-, policy- en
+  backtestcode, met een expliciete phase-7 featurecatalogus zonder de frozen
+  phase-6 allowlist te versoepelen.
+- Featuredistributies en missing coverage per outer fold.
+- Vroege fold-coveragecheck vóór modeltuning.
+- Catalogus met formule, timeframe, lookback en availability-regel.
+- Future-mutation-, higher-timeframe-cutoff-, handformule- en batch/online-paritytests.
+- CLI: `phase7 run` en `phase7 validate`.
+- Artifact hashing, source snapshots, gesloten-holdoutverificatie en een fail-closed clean-Git gate voor formele benchmarkruns.
+
+## Bewust niet geïmplementeerd
+
+Microstructure is niet uit bid-OHLC gereconstrueerd. Zonder echte point-in-time ask,
+spread en tick-countdata zouden spread-z-scores, mid/ask returns en liquidity buckets
+gefabriceerde informatie zijn. Een latere rijkere bron kan deze groep als afzonderlijke
+challenger toevoegen.
+
+Ook tijd-tot/van marktopening is uitgesteld zolang er geen vertrouwde markt-/holiday
+calendar is. De huidige sessievelden zijn expliciet vaste UTC-vensters.
+
+## Ablationvolgorde
+
+1. `mvp`
+2. `price_3min`
+3. `price_session_3min`
+4. `price_session_regime_3min`
+5. `price_session_regime_multitimeframe`
+
+Alle vijf varianten worden op exact dezelfde sample IDs per horizon/fold geëvalueerd.
+
+## Empirische eindverificatie
+
+De formele lokale run `20260907T014255645674Z-b2afe281` op commit
+`3f0a703568224fe9169b1e9f8d61dad131f0005b` eindigde met status `succeeded`.
+`phase7 validate` controleerde 11.311 artifacts en accepteerde completion-versie
+`sha256:beac58092d06350bb067fbd2df144bb9cb2507f45953c19487474c87d0ceca0f`.
+De finale holdout bleef gesloten.
+
+De bevroren research-featurekeuzes zijn:
+
+- 3m: `price_session_regime_multitimeframe`;
+- 6m: `price_session_regime_3min`;
+- 9m: `price_session_regime_multitimeframe`;
+- 12m: `price_session_regime_multitimeframe`;
+- 15m: `mvp`;
+- 30m: `price_session_regime_multitimeframe`;
+- 60m: `price_3min`;
+- 180m: `price_3min`.
+
+De vaste-reference attributiecontrole kiest op alle horizons dezelfde featurevariant
+als de pipeline researchchampion. Het sterkste consistente bewijs ligt op 3m, 30m
+en 60m. Op 6m, 9m, 12m en 180m zijn de formele gains kleiner en gemengd over folds;
+15m behoudt de MVP-features.
+
+Er zijn 0 economic promotion candidates. Alle getrainde model-families selecteerden
+cash/no-trade. Fase 7 sluit daarom af als betrouwbare price-only researchbenchmark
+zonder tradingchampion. Zie `docs/phase7_verification.md` en
+`docs/model_card_v0.2.md`.
+
+## Promotielogica
+
+De pipeline scheidt twee gates:
+
+- **predictive admission:** hogere gemiddelde macro-F1, niet slechtere worst-fold
+  macro-F1 en niet slechtere gemiddelde Brier dan `mvp/reference`;
+- **economic promotion:** daarnaast voldoende trades en positieve base/stress
+  nettoresultaten volgens het bestaande fase-6-contract.
+
+Zelfs een economic candidate wordt alleen als kandidaat gerapporteerd. Phase 7
+activeert geen paper- of live-tradingmodel.

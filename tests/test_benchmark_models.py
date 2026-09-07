@@ -62,6 +62,28 @@ def _fit(family: str, train: pd.DataFrame | None = None) -> FittedModel:
     return fit_model(source, FEATURES, spec, _config(), rounds=4 if family == "xgboost" else None)
 
 
+def test_explicit_phase7_catalog_can_extend_the_frozen_phase6_allowlist() -> None:
+    train = _frame()
+    feature = "p7_safe_price_feature"
+    train[feature] = train[FEATURES[0]] * 0.5
+
+    with pytest.raises(ValueError, match="frozen causal MVP allowlist"):
+        fit_model(train, (feature,), ModelSpec("logistic", 0.1), _config())
+
+    model = fit_model(
+        train,
+        (feature,),
+        ModelSpec("logistic", 0.1),
+        _config(),
+        allowed_feature_names=frozenset({feature}),
+    )
+    probabilities, expected = model.predict(train)
+
+    assert probabilities.shape == (len(train), 3)
+    assert np.isfinite(probabilities).all()
+    assert np.isfinite(expected).all()
+
+
 @pytest.mark.parametrize("family", ["reference", "logistic", "ridge", "xgboost"])
 def test_models_return_finite_fixed_order_probabilities_and_train_only_provenance(
     family: str,
