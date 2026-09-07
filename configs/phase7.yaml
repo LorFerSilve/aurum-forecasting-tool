@@ -1,5 +1,5 @@
 schema_version: 1
-protocol_version: phase7-v1
+protocol_version: phase7-v2
 data_config: phase5.yaml
 features_config: features_phase7.yaml
 horizons: [3, 6, 9, 12, 15, 30, 60, 180]
