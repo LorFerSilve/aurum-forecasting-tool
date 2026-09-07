@@ -11,11 +11,13 @@ config_app = typer.Typer(help="Validate versioned project configuration.")
 data_app = typer.Typer(help="Import and validate market data.")
 dataset_app = typer.Typer(help="Build leakage-safe model datasets.")
 mvp_app = typer.Typer(help="Run the vertical research MVP.")
+benchmark_app = typer.Typer(help="Run the guarded phase-6 multi-horizon benchmark.")
 
 app.add_typer(config_app, name="config")
 app.add_typer(data_app, name="data")
 app.add_typer(dataset_app, name="dataset")
 app.add_typer(mvp_app, name="mvp")
+app.add_typer(benchmark_app, name="benchmark")
 
 ConfigOption = Annotated[
     Path,
@@ -29,6 +31,67 @@ YearsOption = Annotated[
     str | None,
     typer.Option(help="Optional comma-separated development years, for example 2023,2024."),
 ]
+
+
+@benchmark_app.command("run")
+def run_phase6_benchmark(config: ConfigOption = Path("configs/benchmark.yaml")) -> None:
+    """Tune only on inner history, then evaluate frozen outer policies."""
+    from gold_forecasting.benchmark.pipeline import run_benchmark
+
+    output = run_benchmark(config)
+    typer.echo(f"Completed benchmark: {output}")
+
+
+@benchmark_app.command("validate")
+def validate_phase6_benchmark(
+    run_directory: Annotated[Path, typer.Argument(exists=True, file_okay=False)],
+) -> None:
+    """Verify completion status and every persisted artifact hash."""
+    from gold_forecasting.benchmark.pipeline import verify_benchmark
+
+    typer.echo(json.dumps(verify_benchmark(run_directory), indent=2))
+
+
+@benchmark_app.command("reproduce")
+def reproduce_phase6_benchmark(
+    run_directory: Annotated[Path, typer.Argument(exists=True, file_okay=False)],
+    report: Annotated[
+        Path | None,
+        typer.Option(help="New JSON report outside the original run directory.", dir_okay=False),
+    ] = None,
+) -> None:
+    """Refit frozen final candidates and verify prediction and inner-policy parity."""
+    from gold_forecasting.artifacts import write_json_atomic
+    from gold_forecasting.benchmark.reproduce import reproduce_benchmark
+
+    original = run_directory.resolve(strict=True)
+    destination = (
+        report
+        if report is not None
+        else original.parent.parent / f"phase6_reproduction_{original.name}.json"
+    ).resolve()
+    if destination.is_relative_to(original):
+        raise typer.BadParameter(
+            "report must be outside the original run directory", param_hint="report"
+        )
+    if destination.exists():
+        raise typer.BadParameter("report already exists; choose a new path", param_hint="report")
+    try:
+        result = reproduce_benchmark(original)
+        # Refitting can take minutes; recheck before writing if another run created the report.
+        if destination.exists():
+            raise FileExistsError(f"report appeared during reproduction: {destination}")
+        write_json_atomic(destination, result)
+    except (ValueError, OSError) as exc:
+        typer.echo(f"Reproduction failed: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
+    typer.echo(
+        f"Reproduced {result['run_id']}: "
+        f"final fits={result['final_fit_parity_count']}, "
+        f"inner policies={result['inner_policy_parity_count']}, "
+        f"verified files={result['verified_files']}"
+    )
+    typer.echo(f"Reproduction report: {destination}")
 
 
 @config_app.command("validate")
@@ -101,9 +164,7 @@ def build_dataset(
 
     result = build_mvp_dataset(config)
     counts = ", ".join(f"{key}={value}" for key, value in result.row_counts.items())
-    typer.echo(
-        f"Built {result.dataset_version}: {counts}, features={result.feature_count}"
-    )
+    typer.echo(f"Built {result.dataset_version}: {counts}, features={result.feature_count}")
     typer.echo(f"Model table: {result.model_table_path}")
 
 

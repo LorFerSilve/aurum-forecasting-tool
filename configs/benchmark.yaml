@@ -1,0 +1,12 @@
+schema_version: 1
+protocol_version: phase6-v1
+data_config: phase5.yaml
+horizons: [3, 6, 9, 12, 15, 30, 60, 180]
+test_years: [2022, 2023, 2024]
+seed: 20260906
+execution_latency_minutes: 1
+neutral_threshold_bps: 6.0
+xgb_max_rounds: 120
+xgb_early_stopping_rounds: 10
+minimum_policy_trades: 20
+output_directory: reports/benchmark_runs

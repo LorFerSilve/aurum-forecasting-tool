@@ -1,39 +1,79 @@
+# =========================
 # Python
+# =========================
 __pycache__/
 *.py[cod]
+*.egg
 *.egg-info/
+.eggs/
+
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.tox/
+.nox/
+
 .coverage
 htmlcov/
+
 dist/
 build/
+
+# Virtual environments
 .venv/
+venv/
 
+# Jupyter
+.ipynb_checkpoints/
+
+
+# =========================
 # Secrets and local settings
+# =========================
 .env
-*.local.yaml
+.env.*
+!.env.example
 
+*.local.yaml
+*.local.yml
+
+
+# =========================
 # Data and generated artifacts
+# =========================
 data/raw/**
 data/curated/**
 data/features/**
 data/labels/**
 data/model_tables/**
 data/oof_predictions/**
+
 models/**
+
 reports/runs/**
+reports/benchmark_runs/**
 reports/data/*.parquet
 
-# Keep directory documentation/placeholders
+
+# =========================
+# Keep directory structure
+# =========================
 !data/**/.gitkeep
 !data/README.md
+
 !models/.gitkeep
 !reports/.gitkeep
 
-# Editors and OS
+
+# =========================
+# Editors
+# =========================
 .idea/
 .vscode/
+
+
+# =========================
+# OS files
+# =========================
 .DS_Store
 Thumbs.db

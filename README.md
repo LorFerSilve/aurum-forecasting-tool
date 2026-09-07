@@ -62,6 +62,24 @@ ontbrekende minuten niet aantoonbaar door een vertrouwde marktkalender worden ve
 Het kwaliteitsrapport markeert deze beperking expliciet. De modelinput blijft `3min`.
 Zie het [fase-5-datacontract](docs/data_contract_phase5.md) voor de precieze regels.
 
+De afzonderlijke fase-6-benchmark (afgerond; fase 7 volgt) gebruikt dezelfde data en features:
+
+```powershell
+.\.venv\Scripts\gold-forecast.exe benchmark run --config configs/benchmark.yaml
+.\.venv\Scripts\gold-forecast.exe benchmark validate reports/benchmark_runs/<run-id>
+```
+
+Dit commando vergelijkt acht horizons van 3 minuten tot 3 uur op drie walk-forwardjaren.
+Logistische regressie, lineaire returnregressie, XGBoost en alle oorspronkelijke naïeve
+referenties krijgen dezelfde records per horizon/fold. Modelkeuze en handelspolicy gebruiken
+alleen eerdere inner folds; een apart kwartaal blijft gereserveerd voor latere kalibratie.
+Uitkomsten, modellen, configuraties en broncode worden apart onder `reports/benchmark_runs`
+opgeslagen; de bestaande MVP-artefacten blijven ongewijzigd. De benchmark downloadt niets.
+Zie het [fase-6-protocol](docs/research_protocol_phase6.md) voor het vooraf vastgelegde budget,
+de holdoutbeveiliging, kosten, no-tradefallback en promotiecriteria.
+De interpretatie en reproduceerbaarheidsgrens staan in het [fase-6-verificatierapport](docs/phase6_verification.md)
+en de [model card](docs/model_card_phase6.md).
+
 `data import` downloadt uitsluitend de uit `configs/splits_mvp.yaml` afgeleide
 ontwikkelingsjaren. Ruwe bronbestanden en afgeleide datasets worden lokaal gehouden en zijn
 door `.gitignore` van versiebeheer uitgesloten. Zodra de data aanwezig en geldig is, hergebruikt

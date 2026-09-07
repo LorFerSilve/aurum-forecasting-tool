@@ -1,0 +1,116 @@
+{
+  "schema_version": 1,
+  "checked_at": "2026-09-07",
+  "unchanged_files": 27,
+  "verified": true,
+  "files": [
+    {
+      "path": "data/features/.gitkeep",
+      "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+    },
+    {
+      "path": "data/features/histdata/XAU_USD/3min/feature_catalog.json",
+      "sha256": "8d241296f178cf0788d1ea28e2101eeecdffc68aa357057edd44c9b6ef86431d"
+    },
+    {
+      "path": "data/features/histdata/XAU_USD/3min/features.parquet",
+      "sha256": "dab2db3284e9da315222d69f9073ce2eadbc5fb980ebd01f6fc860da470bf8d1"
+    },
+    {
+      "path": "data/features/histdata/XAU_USD/3min/manifest.json",
+      "sha256": "57717b12fff91c16372cfcebf7e329fa4c399372bf9e6ad76f58b6892411ba23"
+    },
+    {
+      "path": "data/labels/.gitkeep",
+      "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+    },
+    {
+      "path": "data/labels/histdata/XAU_USD/15min/label_spec.json",
+      "sha256": "7aa5748d1710c1b69b7d6e1196dc7b42b4d7b115ddff82b1b1e5c1d91463739e"
+    },
+    {
+      "path": "data/labels/histdata/XAU_USD/15min/labels.parquet",
+      "sha256": "cf1fe2c17e25dd5fae530a0d1d88aee5868480a2ddaec929848a663c04edab66"
+    },
+    {
+      "path": "data/labels/histdata/XAU_USD/15min/manifest.json",
+      "sha256": "709a9c59b3a47bae32ea42ac9f805cec10ec8e3edea51c4ed75decfc4ba9cfb6"
+    },
+    {
+      "path": "data/model_tables/mvp/manifest.json",
+      "sha256": "9bdc9b6a43bd8da8863f414f107dedd88925e4e934389e0df870adf4532c1b66"
+    },
+    {
+      "path": "data/model_tables/mvp/model_table.parquet",
+      "sha256": "9a7388ae34757bdf5a7eb808cb6ac2dc9388c58398b90ec5a4483b63f9e4202b"
+    },
+    {
+      "path": "data/model_tables/mvp/sample_index.parquet",
+      "sha256": "b9573c93fa1ced1d0ea876d01061a7e5d2265f392019f32da762bcbe68f87630"
+    },
+    {
+      "path": "data/model_tables/mvp/split_spec.json",
+      "sha256": "1d06a5e9c88a64c7e59a0771ad3521d195e9431a4c816d958ddb500d1f3840e5"
+    },
+    {
+      "path": "models/.gitkeep",
+      "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+    },
+    {
+      "path": "models/mvp/latest.json",
+      "sha256": "e8be85bd1430a9b9ebac53fc11e7d0637e64473b82dcbc29f574c494e301c43a"
+    },
+    {
+      "path": "models/mvp/v0.1.0+09e5c67a0f9d/bundle.joblib",
+      "sha256": "b2f098aac94f2ece083926b433e58258e30f571bb3f8e9782893737fe6be73c4"
+    },
+    {
+      "path": "models/mvp/v0.1.0+09e5c67a0f9d/config_snapshot.json",
+      "sha256": "c55b1b2aa3fcf3b3f780b7ebfe45fa84e34ef2a1d86220593992e2741bc2e8fe"
+    },
+    {
+      "path": "models/mvp/v0.1.0+09e5c67a0f9d/feature_schema.json",
+      "sha256": "e4a54774f309eb12d696329bf09824297e78d1783fa041e9d058c3cf19c76f0c"
+    },
+    {
+      "path": "models/mvp/v0.1.0+09e5c67a0f9d/manifest.json",
+      "sha256": "752980877c5d9e18ce2e9c9486ed02c01949ebeffa814d6512701cfc12b37502"
+    },
+    {
+      "path": "models/mvp/v0.1.0+20f86f897aef/bundle.joblib",
+      "sha256": "16294ea71b06d8546a231ce7173cd6528464dd10fe35d6af27fb0b14bae20fd7"
+    },
+    {
+      "path": "models/mvp/v0.1.0+20f86f897aef/feature_schema.json",
+      "sha256": "e4a54774f309eb12d696329bf09824297e78d1783fa041e9d058c3cf19c76f0c"
+    },
+    {
+      "path": "models/mvp/v0.1.0+20f86f897aef/manifest.json",
+      "sha256": "0245f31d0bed66ea3fe6dfb408412354c80f991ec446d5922153ff862212da7f"
+    },
+    {
+      "path": "models/mvp/v0.1.0+9a53370e1ade/bundle.joblib",
+      "sha256": "07ba557ea47d4394edd4021f57d2cd8430418773e752914aa46ddfdb6dc13ad7"
+    },
+    {
+      "path": "models/mvp/v0.1.0+9a53370e1ade/config_snapshot.json",
+      "sha256": "afa66bffd133235f20905955eb6d53e5858436c35ebe6b36d13b557573adcf8d"
+    },
+    {
+      "path": "models/mvp/v0.1.0+9a53370e1ade/feature_schema.json",
+      "sha256": "e4a54774f309eb12d696329bf09824297e78d1783fa041e9d058c3cf19c76f0c"
+    },
+    {
+      "path": "models/mvp/v0.1.0+9a53370e1ade/manifest.json",
+      "sha256": "81d12aa2e9e170856f7ecf6962e54cab9e2017755b2fb5f73a6702def62cd146"
+    },
+    {
+      "path": "models/preprocessors/mvp.joblib",
+      "sha256": "7462aead3a9f4faa096e210d131d29f085dfe43ae5d5dae884ac350add46025c"
+    },
+    {
+      "path": "models/preprocessors/mvp.metadata.json",
+      "sha256": "b038a74a47ead1d2ff766f59ab64e26aa2c974c56dab0d56448186528ebbcf45"
+    }
+  ]
+}

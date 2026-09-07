@@ -26,10 +26,10 @@ Daarna vervangen of versterken we telkens één onderdeel. Na iedere fase blijft
 | Onderdeel | Huidige status |
 |---|---|
 | Systeemontwerp | Afgerond in `project_idea.md` |
-| Roadmap | Fasen 0–5 uitgevoerd en geverifieerd; bronbeperking voor dag/maand vastgelegd |
-| Implementatie | Research-MVP en geharde intraday-datalaag voltooid |
-| Huidige release | `v0.1.0` |
-| Eerstvolgende stap | Fase 6 — streng evaluatiekader en backtester v1 |
+| Roadmap | Fasen 0–6 uitgevoerd en geverifieerd; bronbeperking voor dag/maand vastgelegd |
+| Implementatie | Research-MVP, geharde intraday-datalaag en fase-6-benchmark voltooid |
+| Huidige release | `v0.1.0`; fase-6-resultaten zijn voorbereid voor `v0.2` |
+| Eerstvolgende stap | Fase 7 — rijkere price-only features en regimes |
 | Standaard einddoel | Professioneel paper-trading-systeem |
 | Echte orders | Afzonderlijke, optionele laatste fase |
 
@@ -697,7 +697,8 @@ Besluit: accepteer de datalaag en behoud de huidige modelchampion. De publieke H
 blijft bruikbaar voor de gekozen intraday-input. `1d` en `1mo` worden ondersteund maar niet
 als modelinput ingezet: zonder vertrouwde kalender is volledigheid niet bewezen. Een
 kalender-/feedverbetering is daarvoor nodig; ontbrekende prijzen worden niet ingevuld.
-De release blijft `v0.1.0`; fasen 6–7 zijn nog nodig voor `v0.2`.
+De release blijft `v0.1.0`; fase 6 is als researchbenchmark afgerond en fase 7 is nog
+nodig voor de betrouwbare price-only benchmark van `v0.2`.
 
 ---
 
@@ -713,40 +714,40 @@ Van één MVP-split overstappen naar een onderzoeksopzet die robuust genoeg is o
 
 ### Labels en horizons
 
-- [ ] Maak labels voor 3, 6, 9, 12, 15 en 30 minuten.
-- [ ] Voeg daarna 1h, 3h en 24h toe indien de data dit betrouwbaar ondersteunt.
-- [ ] Gebruik uitvoerbare entryprijzen en cost-aware neutral zones.
-- [ ] Bewaar continue returns, richting, future range en volatility.
-- [ ] Versieer iedere labeldefinitie.
+- [x] Maak labels voor 3, 6, 9, 12, 15 en 30 minuten.
+- [x] Voeg 1h en 3h toe; stel 24h uit zolang de data geen betrouwbare kalender ondersteunt.
+- [x] Gebruik uitvoerbare entryprijzen en cost-aware neutral zones.
+- [x] Bewaar continue returns, richting, future range en volatility.
+- [x] Versieer iedere labeldefinitie.
 
 ### Tijdsvalidatie
 
-- [ ] Bouw outer walk-forward-folds.
-- [ ] Bouw inner folds voor tuning en latere OOF-voorspellingen.
-- [ ] Purge samples waarvan labels over een splitgrens lopen.
-- [ ] Voeg een embargo/gap toe op basis van de langste gebruikte horizon.
-- [ ] Reserveer een afzonderlijk calibrationblok.
-- [ ] Vergrendel de finale holdout voor gewone train- en evaluate-commando's.
-- [ ] Rapporteer zowel foldgemiddelde, mediaan als slechtste fold.
+- [x] Bouw outer walk-forward-folds.
+- [x] Bouw inner folds voor tuning en reproduceerbare inner voorspellingen; volledige OOF-output blijft fase 11.
+- [x] Purge samples waarvan labels over een splitgrens lopen.
+- [x] Voeg een embargo/gap toe op basis van de langste gebruikte horizon.
+- [x] Reserveer een afzonderlijk calibrationblok.
+- [x] Vergrendel de finale holdout voor gewone train- en evaluate-commando's.
+- [x] Rapporteer zowel foldgemiddelde, mediaan als slechtste fold.
 
 ### Sterkere baselines
 
-- [ ] Behoud alle MVP-baselines.
-- [ ] Voeg lineaire returnregressie toe.
-- [ ] Voeg XGBoost met early stopping toe.
-- [ ] Maak een eenvoudige volatilitybaseline.
-- [ ] Registreer per horizon de huidige champion.
+- [x] Behoud alle MVP-baselines.
+- [x] Voeg lineaire returnregressie toe.
+- [x] Voeg XGBoost met early stopping toe.
+- [x] Maak een eenvoudige volatilitybaseline.
+- [x] Registreer per horizon de huidige champion.
 
 ### Backtester v1
 
-- [ ] Scheid prediction, signal, order en fill time.
-- [ ] Gebruik ask bij aankoop en bid bij verkoop waar data beschikbaar is.
-- [ ] Modelleer spread, commissie, latency en configureerbare slippage.
-- [ ] Verbied overlappende posities wanneer de gekozen policy dat vereist.
-- [ ] Ondersteun no-signal en confidence/expected-edge thresholds.
-- [ ] Rapporteer nettoresultaat, drawdown, turnover, exposure en aantal trades.
-- [ ] Splits resultaten per sessie, horizon en tijdsfold.
-- [ ] Voorkom thresholdselectie op de evaluatiefold.
+- [x] Scheid prediction, signal, order en fill time.
+- [x] Gebruik ask bij aankoop en bid bij verkoop waar data beschikbaar is.
+- [x] Modelleer spread, commissie, latency en configureerbare slippage.
+- [x] Verbied overlappende posities wanneer de gekozen policy dat vereist.
+- [x] Ondersteun no-signal en confidence/expected-edge thresholds.
+- [x] Rapporteer nettoresultaat, drawdown, turnover, exposure en aantal trades.
+- [x] Splits resultaten per sessie, horizon en tijdsfold.
+- [x] Voorkom thresholdselectie op de evaluatiefold.
 
 ### Metricshiërarchie
 
@@ -761,10 +762,27 @@ Geen enkele metric volstaat op zichzelf.
 
 ### Exitcriteria
 
-- Walk-forwardevaluatie is reproduceerbaar.
-- Alle kandidaten gebruiken exact dezelfde records en kosten.
-- De finale holdout is nog nooit bekeken.
-- Er bestaat een geloofwaardige price-only benchmark waartegen latere complexiteit wordt gemeten.
+- [x] Walk-forwardevaluatie is reproduceerbaar.
+- [x] Alle kandidaten gebruiken exact dezelfde records en kosten.
+- [x] De finale holdout is nog nooit bekeken.
+- [x] Er bestaat een geloofwaardige price-only benchmark waartegen latere complexiteit wordt gemeten.
+
+### Verificatie en besluit — 2026-09-07
+
+De volledige fase-6-run `20260906T180106245286Z-630162b9` is geslaagd: acht horizons,
+drie outer jaren, 264 outer evaluaties en 96 getrainde outer fits. De exacte finale
+voorspellingen en beleidsselecties zijn opnieuw geproduceerd: 96/96 parity, 2.319
+artefacten gecontroleerd, finale holdout niet geopend en de oorspronkelijke run niet
+gewijzigd. De selectiecontrole bevestigt dat de rankings en XGBoost-rounds uit de
+opgeslagen inner scores overeenkomen; alle 96 geselecteerde policies zijn cash.
+
+Het promotiebesluit is daarom `keep_champion`: geen challenger en geen tradingchampion
+wordt geactiveerd. Dit is een gecontroleerd negatief researchresultaat, geen
+winstprognose. Zie het [fase-6-verificatierapport](docs/phase6_verification.md), de
+[model card](docs/model_card_phase6.md), het
+[reproductierapport](reports/phase6_reproduction_20260906T180106245286Z-630162b9.json),
+de [selectiecontrole](reports/phase6_selection_verification.json) en de
+[MVP-preservatiecontrole](reports/phase6_mvp_preservation.json).
 
 ---
 

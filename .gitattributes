@@ -1,0 +1,15 @@
+# Automatically detect text files
+* text=auto
+
+# Source/config/documentation files use Unix line endings
+*.py text eol=lf
+*.md text eol=lf
+*.toml text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.json text eol=lf
+*.sh text eol=lf
+
+# Windows scripts
+*.bat text eol=crlf
+*.cmd text eol=crlf
