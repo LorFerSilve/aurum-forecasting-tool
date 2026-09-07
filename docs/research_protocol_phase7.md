@@ -31,12 +31,16 @@ Hierdoor is de featurelaag de primaire veranderende variabele.
 
 ## Gemeenschappelijk sample-universe
 
-Alle cumulatieve feature-ablaties worden geëvalueerd op de rijen waarop de volledige
-phase-7 featurecatalogus causaal en eindig beschikbaar is. Een eenvoudiger variant
-krijgt dus geen andere timestamps dan een rijkere variant. Dit voorkomt dat coverage
-een featureverbetering nabootst.
+Alle cumulatieve feature-ablaties worden geëvalueerd op exact dezelfde causale
+MVP/3min prediction rows. Beschikbaarheid van een rijkere of tragere timeframe mag
+dus geen rijen uit een eenvoudiger variant verwijderen. Een ontbrekende phase-7
+featurewaarde blijft expliciet missing en wordt pas in de modelpipeline met de
+bestaande **train-only mediaan-imputer** behandeld. Validatie- of outer data bepalen
+nooit de imputatiewaarde. Dit voorkomt dat coverage een featureverbetering nabootst
+en voorkomt tegelijk dat een tijdelijk sparse 1h/3h-segment een volledig kwartaal
+uit alle ablations verwijdert.
 
-Voor ieder extern timeframe geldt:
+Voor iedere daadwerkelijk geobserveerde extern-timeframefeature geldt:
 
 ```text
 source_candle_close <= prediction_time
@@ -88,9 +92,12 @@ Voor promotie moet minimaal worden gecontroleerd:
 - future mutation verandert oudere features niet;
 - batch en single-timestamp/online berekening zijn exact gelijk;
 - hogere timeframes gebruiken nooit een nog open candle;
-- alle modelinputs zijn eindig;
-- train-only preprocessing blijft intact;
-- featuredistributies worden per outer fold opgeslagen;
+- phase-7 features bevatten nooit +/-inf; missing waarden blijven expliciet tot
+  train-only preprocessing;
+- imputatie en scaling worden uitsluitend op de betreffende trainingfold gefit;
+- iedere trainingfold heeft voor iedere gebruikte feature minimaal één geobserveerde
+  waarde;
+- featuredistributies inclusief missing coverage worden per outer fold opgeslagen;
 - alle ablations gebruiken dezelfde sample IDs;
 - de finale holdout blijft gesloten;
 - de formele benchmark draait alleen vanaf een schone, gecommitte Git-state.
