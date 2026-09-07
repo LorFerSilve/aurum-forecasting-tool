@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import importlib.metadata
 import json
+import os
 from pathlib import Path
 from statistics import median
 from typing import Any
@@ -950,6 +951,11 @@ def run_phase8(
     _require_clean_code_version(
         expected_code_version
     )
+    if config.deterministic_algorithms:
+        os.environ.setdefault(
+            "CUBLAS_WORKSPACE_CONFIG",
+            ":4096:8",
+        )
     resolve_device(config.device)
 
     reference = load_phase7_reference(
@@ -1020,6 +1026,10 @@ def run_phase8(
                     torch.cuda.is_available()
                 ),
                 "cuda_version": torch.version.cuda,
+                "deterministic_algorithms": config.deterministic_algorithms,
+                "cublas_workspace_config": os.environ.get(
+                    "CUBLAS_WORKSPACE_CONFIG"
+                ),
                 "device": str(
                     resolve_device(config.device)
                 ),
