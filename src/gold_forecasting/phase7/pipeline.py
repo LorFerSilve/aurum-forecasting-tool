@@ -227,6 +227,14 @@ def run_phase7(config_path: str | Path) -> Path:
     print(f"Phase-7 run: {output}", flush=True)
 
     try:
+        if (
+            record.code_version in {"unavailable", "uncommitted"}
+            or record.code_version.endswith("+dirty")
+        ):
+            raise RuntimeError(
+                "formal phase-7 runs require a clean committed Git working tree; "
+                f"found {record.code_version!r}"
+            )
         write_json_atomic(output / "resolved_config.json", config.model_dump(mode="json"))
         write_json_atomic(
             output / "resolved_feature_config.json", feature_config.model_dump(mode="json")
