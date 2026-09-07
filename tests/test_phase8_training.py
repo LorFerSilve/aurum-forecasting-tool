@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+import torch
 
 from gold_forecasting.phase8.config import Phase8Config
 from gold_forecasting.phase8.sequences import (
@@ -12,6 +13,7 @@ from gold_forecasting.phase8.sequences import (
     SequenceFrame,
 )
 from gold_forecasting.phase8.training import (
+    _gradients_are_finite,
     fit_normalizer,
     predict_neural_model,
     train_neural_model,
@@ -182,6 +184,8 @@ def test_tiny_direction_dataset_overfits_and_same_seed_reproduces() -> None:
     )
     assert first_prediction.probabilities.dtype == np.float64
     assert first.parameter_count <= config.parameter_budget
+    assert first.optimizer_steps > 0
+    assert first.amp_skipped_steps == 0
     assert all(
         np.isfinite(float(epoch["max_preclip_gradient_norm"]))
         and float(epoch["max_preclip_gradient_norm"]) > 0.0
@@ -199,3 +203,34 @@ def test_tiny_direction_dataset_overfits_and_same_seed_reproduces() -> None:
         rtol=0.0,
         atol=1e-7,
     )
+
+
+def test_gradient_finiteness_guard_detects_nonfinite_values() -> None:
+    sequences, table = _synthetic_training_fixture(rows=6)
+    rows = np.arange(len(table), dtype=np.int64)
+    config = _direction_only_config()
+    result = train_neural_model(
+        sequences,
+        table,
+        rows,
+        None,
+        ("3min",),
+        config,
+        seed=7,
+        forced_epochs=1,
+    )
+
+    parameters = [
+        parameter
+        for parameter in result.model.parameters()
+        if parameter.requires_grad
+    ]
+    for parameter in parameters:
+        parameter.grad = torch.ones_like(parameter)
+    assert _gradients_are_finite(result.model)
+
+    parameters[0].grad = torch.full_like(
+        parameters[0],
+        float("inf"),
+    )
+    assert not _gradients_are_finite(result.model)

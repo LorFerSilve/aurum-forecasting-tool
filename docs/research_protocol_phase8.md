@@ -84,7 +84,13 @@ enters a sequence.
   trained seed models;
 - the final seed models are refit for the median inner-selected epoch count, so outer test data
   never selects epochs;
-- mixed precision is allowed only on CUDA; deterministic algorithms remain enabled.
+- mixed precision is allowed only on CUDA; deterministic algorithms remain enabled;
+- CUDA AMP uses dynamic GradScaler loss scaling. A non-finite gradient caused by
+  temporary loss-scale overflow skips that optimizer update and reduces the scale;
+  non-finite unscaled/full-precision gradients remain a hard failure;
+- before expensive fitting, the formal run validates all phase-7 comparison
+  artifacts and outer sample digests and executes real-data device smoke fits for
+  both the short- and long-horizon timeframe sets.
 
 ## Evaluation contract
 

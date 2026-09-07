@@ -18,6 +18,10 @@
 - twee vooraf bevroren seeds en outer seed-ensemble;
 - CUDA auto-detectie en mixed precision op CUDA;
 - deterministische seed/configuratie;
+- AMP-overflowherstel via GradScaler met gelogde skipped optimizer steps;
+- preflight van alle phase-7 metric/digest-contracten voor alle horizons;
+- echte-data CUDA/CPU-smokefits voor zowel korte als lange timeframe-sets vóór de benchmark;
+- atomaire neural checkpoints met optimizer/AMP-auditmetadata;
 - synthetische intentional-overfit-, train-only-normalisatie- en same-seed CPU-tests;
 - exact outer sample-digestcontract tegen de bevroren phase-7 run;
 - hergebruik van de bestaande policy- en base/stress-backtestlogica;
