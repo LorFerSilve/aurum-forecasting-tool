@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "Reproducible, leakage-aware XAU/USD forecasting research pipeline"
 readme = "README.md"
 requires-python = ">=3.11,<3.13"
-license = "LicenseRef-Proprietary"
+license = "Apache-2.0"
 authors = [{ name = "Loren" }]
 dependencies = [
   "httpx>=0.27,<1",
