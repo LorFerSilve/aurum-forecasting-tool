@@ -62,7 +62,7 @@ class Phase7FeatureConfig(BaseModel):
         return values
 
     @model_validator(mode="after")
-    def validate_timeframe_budget(self) -> "Phase7FeatureConfig":
+    def validate_timeframe_budget(self) -> Phase7FeatureConfig:
         if tuple(self.timeframe_windows) != _ALLOWED_TIMEFRAMES:
             raise ValueError(
                 "timeframe_windows must contain exactly, in order: "
@@ -531,7 +531,9 @@ def build_phase7_features(
     if missing:
         raise Phase7FeatureBuildError(f"missing configured candle inputs: {', '.join(missing)}")
     if mvp_config.input_timeframe != config.anchor_timeframe:
-        raise Phase7FeatureBuildError("phase-7 anchor must preserve the MVP 3min prediction cadence")
+        raise Phase7FeatureBuildError(
+            "phase-7 anchor must preserve the MVP 3min prediction cadence"
+        )
 
     base = build_mvp_features(candles_by_timeframe["3min"], mvp_config)
     combined = base.features.copy()
