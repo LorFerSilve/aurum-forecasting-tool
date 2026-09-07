@@ -10,7 +10,7 @@ import time
 from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -446,7 +446,7 @@ def train_neural_model(
                 )
             if not torch.isfinite(loss):
                 raise Phase8TrainingError("training loss became non-finite")
-            torch.autograd.backward(cast(Tensor, scaler.scale(loss)))
+            torch.autograd.backward(scaler.scale(loss))
             scaler.unscale_(optimizer)
             gradient_norm = float(
                 torch.nn.utils.clip_grad_norm_(
