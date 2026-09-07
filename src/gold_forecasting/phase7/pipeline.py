@@ -42,7 +42,7 @@ from gold_forecasting.labels.multihorizon import build_horizon_labels
 from gold_forecasting.phase7.config import Phase7Config, load_phase7_config
 from gold_forecasting.registry import RunRegistry
 
-_TIMEFRAMES = ("3min", "5min", "15min", "30min", "1h", "3h")
+_TIMEFRAMES = ("1min", "3min", "5min", "15min", "30min", "1h", "3h")
 
 
 def _benchmark_config(config: Phase7Config) -> BenchmarkConfig:
@@ -209,9 +209,11 @@ def run_phase7(config_path: str | Path) -> Path:
     validate_existing_mvp_data(project.config_path)
 
     minutes, minute_manifest = _load_curated(root, project, "1min")
-    candles: dict[str, pd.DataFrame] = {}
+    candles: dict[str, pd.DataFrame] = {"1min": minutes}
     manifests: dict[str, Any] = {"1min": minute_manifest}
     for timeframe in _TIMEFRAMES:
+        if timeframe == "1min":
+            continue
         frame, manifest = _load_curated(root, project, timeframe)
         candles[timeframe] = frame
         manifests[timeframe] = manifest
