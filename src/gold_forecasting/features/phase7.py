@@ -632,24 +632,39 @@ def build_phase7_features(
     if len(set(catalog.feature_names)) != len(catalog.feature_names):
         raise Phase7FeatureBuildError("phase-7 feature names are not unique")
 
-    feature_matrix = combined.loc[:, list(catalog.feature_names)]
-    finite = pd.Series(
-        np.isfinite(feature_matrix.to_numpy(dtype=np.float64)).all(axis=1),
-        index=combined.index,
-    )
-    source_complete = combined[availability_columns + window_columns].notna().all(axis=1)
-    valid = finite & source_complete
+    # The benchmark universe is anchored to the already-causal MVP rows.  Sparse
+    # higher-timeframe observations remain NaN and are handled by the existing
+    # train-only median imputer.  Dropping their rows here would let data
+    # availability, rather than feature quality, change the ablation sample.
+    mvp_matrix = combined.loc[:, list(mvp_names)].to_numpy(dtype=np.float64)
+    if not np.isfinite(mvp_matrix).all():
+        raise Phase7FeatureBuildError("MVP anchor features must remain finite")
+
+    feature_matrix = combined.loc[:, list(catalog.feature_names)].to_numpy(dtype=np.float64)
+    if np.isinf(feature_matrix).any():
+        raise Phase7FeatureBuildError("phase-7 feature calculation produced infinite values")
+
     for available in availability_columns:
-        valid &= combined[available].le(combined["prediction_time_utc"])
+        observed = combined[available].notna()
+        if combined.loc[observed, available].gt(
+            combined.loc[observed, "prediction_time_utc"]
+        ).any():
+            raise Phase7FeatureBuildError(
+                f"{available} contains a source candle that was not yet closed"
+            )
 
     prefilter_rows = len(combined)
-    combined = combined.loc[valid].copy()
     if combined.empty:
-        raise Phase7FeatureBuildError("no common rows remain after phase-7 feature alignment")
+        raise Phase7FeatureBuildError("no MVP anchor rows are available for phase 7")
 
     all_window_columns = ["feature_window_start_utc", *window_columns]
     combined["feature_window_start_utc"] = combined[all_window_columns].min(axis=1)
     combined["feature_available_at_utc"] = combined["prediction_time_utc"]
+
+    alignment_rows = {
+        timeframe: int(combined[f"_p7_{timeframe}_available_at_utc"].notna().sum())
+        for timeframe in config.timeframe_windows
+    }
     internal = [*availability_columns, *window_columns]
     combined = combined.drop(columns=internal)
     if combined.duplicated(["instrument", "source", "prediction_time_utc"]).any():
@@ -670,11 +685,23 @@ def build_phase7_features(
         "output_rows": len(combined),
         "dropped_for_common_universe": prefilter_rows - len(combined),
         "stale_alignment_rows": stale_counts,
+        "alignment_available_rows": alignment_rows,
+        "alignment_available_fraction": {
+            name: rows / len(combined) for name, rows in alignment_rows.items()
+        },
         "feature_count": len(catalog.feature_names),
         "variant_feature_counts": {key: len(value) for key, value in variants.items()},
-        "nonfinite_output_values": int(
-            (~np.isfinite(combined.loc[:, list(catalog.feature_names)].to_numpy())).sum()
+        "missing_feature_values": int(
+            combined.loc[:, list(catalog.feature_names)].isna().to_numpy().sum()
         ),
+        "infinite_output_values": int(
+            np.isinf(
+                combined.loc[:, list(catalog.feature_names)].to_numpy(dtype=np.float64)
+            ).sum()
+        ),
+        "feature_non_null_fraction": {
+            name: float(combined[name].notna().mean()) for name in catalog.feature_names
+        },
         "build_seconds": time.perf_counter() - started,
     }
     return Phase7FeatureBuildResult(features=combined, catalog=catalog, diagnostics=diagnostics)
