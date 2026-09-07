@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 import torch
@@ -16,6 +18,7 @@ from gold_forecasting.phase8.training import (
     _gradients_are_finite,
     fit_normalizer,
     predict_neural_model,
+    save_checkpoint,
     train_neural_model,
 )
 
@@ -131,7 +134,9 @@ def test_normalizer_is_unchanged_when_only_validation_rows_are_mutated() -> None
     assert rebuilt.target_scales == original.target_scales
 
 
-def test_tiny_direction_dataset_overfits_and_same_seed_reproduces() -> None:
+def test_tiny_direction_dataset_overfits_and_same_seed_reproduces(
+    tmp_path: Path,
+) -> None:
     sequences, table = _synthetic_training_fixture()
     rows = np.arange(len(table), dtype=np.int64)
     config = _direction_only_config()
@@ -186,6 +191,16 @@ def test_tiny_direction_dataset_overfits_and_same_seed_reproduces() -> None:
     assert first.parameter_count <= config.parameter_budget
     assert first.optimizer_steps > 0
     assert first.amp_skipped_steps == 0
+    checkpoint = tmp_path / "checkpoint.pt"
+    save_checkpoint(first, checkpoint)
+    payload = torch.load(
+        checkpoint,
+        map_location="cpu",
+        weights_only=True,
+    )
+    assert payload["optimizer_steps"] == first.optimizer_steps
+    assert payload["amp_skipped_steps"] == first.amp_skipped_steps
+    assert payload["parameter_count"] == first.parameter_count
     assert all(
         np.isfinite(float(epoch["max_preclip_gradient_norm"]))
         and float(epoch["max_preclip_gradient_norm"]) > 0.0
