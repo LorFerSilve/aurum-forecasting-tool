@@ -8,6 +8,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import pandas as pd
 
 from gold_forecasting.artifacts import (
@@ -66,6 +67,32 @@ def _benchmark_config(config: Phase7Config) -> BenchmarkConfig:
     )
 
 
+def _distribution_stats(values: pd.Series) -> dict[str, float | int | None]:
+    numeric = values.astype("float64")
+    if np.isinf(numeric.to_numpy()).any():
+        raise ValueError("feature distribution contains infinite values")
+    observed = numeric.dropna()
+    if observed.empty:
+        return {
+            "observed_rows": 0,
+            "missing_rows": len(numeric),
+            "mean": None,
+            "std": None,
+            "p05": None,
+            "p50": None,
+            "p95": None,
+        }
+    return {
+        "observed_rows": len(observed),
+        "missing_rows": int(numeric.isna().sum()),
+        "mean": float(observed.mean()),
+        "std": float(observed.std(ddof=0)),
+        "p05": float(observed.quantile(0.05)),
+        "p50": float(observed.quantile(0.50)),
+        "p95": float(observed.quantile(0.95)),
+    }
+
+
 def _feature_distribution(
     train: pd.DataFrame,
     test: pd.DataFrame,
@@ -73,25 +100,88 @@ def _feature_distribution(
 ) -> dict[str, Any]:
     records: dict[str, Any] = {}
     for name in feature_names:
-        train_values = train[name].astype("float64")
-        test_values = test[name].astype("float64")
-        train_std = float(train_values.std(ddof=0))
+        train_stats = _distribution_stats(train[name])
+        test_stats = _distribution_stats(test[name])
+        train_mean = train_stats["mean"]
+        test_mean = test_stats["mean"]
+        train_std = train_stats["std"]
+        shift = None
+        if (
+            isinstance(train_mean, float)
+            and isinstance(test_mean, float)
+            and isinstance(train_std, float)
+        ):
+            shift = float((test_mean - train_mean) / max(train_std, 1e-12))
         records[name] = {
-            "train_mean": float(train_values.mean()),
-            "train_std": train_std,
-            "train_p05": float(train_values.quantile(0.05)),
-            "train_p50": float(train_values.quantile(0.50)),
-            "train_p95": float(train_values.quantile(0.95)),
-            "test_mean": float(test_values.mean()),
-            "test_std": float(test_values.std(ddof=0)),
-            "test_p05": float(test_values.quantile(0.05)),
-            "test_p50": float(test_values.quantile(0.50)),
-            "test_p95": float(test_values.quantile(0.95)),
-            "standardized_mean_shift": float(
-                (test_values.mean() - train_values.mean()) / max(train_std, 1e-12)
-            ),
+            "train": train_stats,
+            "test": test_stats,
+            "train_missing_fraction": float(train[name].isna().mean()),
+            "test_missing_fraction": float(test[name].isna().mean()),
+            "standardized_mean_shift": shift,
         }
     return records
+
+
+def _validate_fold_coverage(
+    table: pd.DataFrame,
+    folds: tuple[Any, ...],
+    feature_names: tuple[str, ...],
+) -> dict[str, Any]:
+    """Fail before tuning when a required time block or train feature has no support."""
+    coverage: dict[str, Any] = {}
+    for fold in folds:
+        train = select_block(table, fold.train, gap_minutes=181)
+        calibration = select_block(table, fold.calibration, purge=False)
+        test = select_block(table, fold.test, purge=False)
+        blocks = {
+            "train": train,
+            "calibration": calibration,
+            "test": test,
+        }
+        empty = [name for name, frame in blocks.items() if frame.empty]
+        if empty:
+            raise ValueError(
+                f"phase-7 fold coverage is empty for {fold.name}: {', '.join(empty)}"
+            )
+
+        train_blocks: dict[str, pd.DataFrame] = {"outer_train": train}
+        inner_counts: dict[str, Any] = {}
+        for inner in fold.inner_folds:
+            inner_train = select_block(table, inner.train, gap_minutes=181)
+            validation = select_block(table, inner.validation, purge=False)
+            if inner_train.empty or validation.empty:
+                raise ValueError(
+                    "phase-7 inner fold coverage is empty for "
+                    f"{fold.name}/{inner.name}: train={len(inner_train)}, "
+                    f"validation={len(validation)}"
+                )
+            train_blocks[f"inner_{inner.name}"] = inner_train
+            inner_counts[inner.name] = {
+                "train_rows": len(inner_train),
+                "validation_rows": len(validation),
+            }
+
+        unsupported: list[str] = []
+        for block_name, frame in train_blocks.items():
+            observed = frame.loc[:, list(feature_names)].notna().any(axis=0)
+            unsupported.extend(
+                f"{block_name}:{name}" for name in observed.index[~observed]
+            )
+        if unsupported:
+            preview = ", ".join(unsupported[:8])
+            suffix = " ..." if len(unsupported) > 8 else ""
+            raise ValueError(
+                "phase-7 train-only imputation has no observed value for "
+                f"{fold.name}: {preview}{suffix}"
+            )
+
+        coverage[fold.name] = {
+            "train_rows": len(train),
+            "calibration_rows": len(calibration),
+            "test_rows": len(test),
+            "inner_folds": inner_counts,
+        }
+    return coverage
 
 
 def _predictive_gate(candidate: dict[str, Any], baseline: dict[str, Any]) -> bool:
@@ -335,6 +425,12 @@ def run_phase7(config_path: str | Path) -> Path:
             validate_development_frame(table)
             horizon_directory = output / f"horizon_{horizon}"
             write_parquet_atomic(horizon_directory / "model_table.parquet", table)
+            fold_coverage = _validate_fold_coverage(
+                table, folds, built.catalog.feature_names
+            )
+            write_json_atomic(
+                horizon_directory / "fold_coverage.json", fold_coverage
+            )
 
             distribution: dict[str, Any] = {}
             for fold in folds:
@@ -358,6 +454,7 @@ def run_phase7(config_path: str | Path) -> Path:
                         fold,
                         benchmark_config,
                         destination / fold.name,
+                        allowed_feature_names=frozenset(built.catalog.feature_names),
                     )
                     for fold in folds
                 ]
