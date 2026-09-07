@@ -16,7 +16,7 @@ from gold_forecasting.features.phase7 import (
 )
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-_MINUTES = {"3min": 3, "5min": 5, "15min": 15, "30min": 30, "1h": 60, "3h": 180}
+_MINUTES = {"1min": 1, "3min": 3, "5min": 5, "15min": 15, "30min": 30, "1h": 60, "3h": 180}
 
 
 def _candles(timeframe: str, *, hours: int = 30) -> pd.DataFrame:
@@ -56,6 +56,7 @@ def _mvp_config():
 def _phase7_config() -> Phase7FeatureConfig:
     return Phase7FeatureConfig(
         timeframe_windows={
+            "1min": (2, 3),
             "3min": (2, 3),
             "5min": (2, 3),
             "15min": (2, 3),
@@ -71,7 +72,7 @@ def _phase7_config() -> Phase7FeatureConfig:
 def test_repository_phase7_feature_config_is_valid_and_microstructure_is_disabled() -> None:
     config = load_phase7_feature_config(PROJECT_ROOT / "configs" / "features_phase7.yaml")
     assert config.anchor_timeframe == "3min"
-    assert tuple(config.timeframe_windows) == ("3min", "5min", "15min", "30min", "1h", "3h")
+    assert tuple(config.timeframe_windows) == ("1min", "3min", "5min", "15min", "30min", "1h", "3h")
     assert config.microstructure_enabled is False
     with pytest.raises(ValueError):
         Phase7FeatureConfig(
