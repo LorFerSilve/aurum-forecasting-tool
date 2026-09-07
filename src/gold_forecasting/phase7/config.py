@@ -12,7 +12,7 @@ class Phase7Config(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     schema_version: Literal[1] = 1
-    protocol_version: Literal["phase7-v1"] = "phase7-v1"
+    protocol_version: Literal["phase7-v2"] = "phase7-v2"
     data_config: str = "phase5.yaml"
     features_config: str = "features_phase7.yaml"
     horizons: tuple[StrictInt, ...] = (3, 6, 9, 12, 15, 30, 60, 180)
