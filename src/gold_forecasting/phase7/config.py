@@ -17,7 +17,7 @@ class Phase7Config(BaseModel):
     features_config: str = "features_phase7.yaml"
     horizons: tuple[StrictInt, ...] = (3, 6, 9, 12, 15, 30, 60, 180)
     test_years: tuple[StrictInt, ...] = (2022, 2023, 2024)
-    seed: int = Field(default=20260907, ge=0, strict=True)
+    seed: int = Field(default=20260906, ge=0, strict=True)
     xgb_max_rounds: int = Field(default=120, ge=2, le=120, strict=True)
     xgb_early_stopping_rounds: int = Field(default=10, ge=1, le=10, strict=True)
     minimum_policy_trades: int = Field(default=20, ge=1, strict=True)
