@@ -519,8 +519,8 @@ def verify_phase7(output: str | Path) -> dict[str, Any]:
     result = verify_benchmark(output)
     root = Path(output).resolve(strict=True)
     summary = json.loads((root / "summary.json").read_text(encoding="utf-8"))
-    if summary.get("protocol") != "phase7-v1":
-        raise ValueError("run is not a phase7-v1 result")
+    if summary.get("protocol") != "phase7-v2":
+        raise ValueError("run is not a phase7-v2 result")
     if summary.get("holdout_opened") is not False:
         raise ValueError("phase-7 run must not open the final holdout")
     result["protocol"] = summary["protocol"]
