@@ -15,11 +15,16 @@
 - Causale volatility buckets, trend score en shock score.
 - Stalenessguard: een oudere hogere-timeframe candle wordt niet onbeperkt over
   datagaten vooruit gedragen.
-- Gemeenschappelijk volledig feature-universe voor alle ablations.
+- Gemeenschappelijk MVP-geankerd sample-universe voor alle ablations; sparse
+  hogere-timeframefeatures verwijderen geen prediction rows.
+- Missing phase-7 featurewaarden worden uitsluitend met de bestaande train-only
+  mediaan-imputer behandeld; geen forward/backfill of outer-statistiek.
 - Cumulatieve ablations van MVP tot volledige multi-timeframe variant.
 - Hergebruik van de fase-6 nested walk-forward-, preprocessing-, policy- en
-  backtestcode.
-- Featuredistributies per outer fold.
+  backtestcode, met een expliciete phase-7 featurecatalogus zonder de frozen
+  phase-6 allowlist te versoepelen.
+- Featuredistributies en missing coverage per outer fold.
+- Vroege fold-coveragecheck vóór modeltuning.
 - Catalogus met formule, timeframe, lookback en availability-regel.
 - Future-mutation-, higher-timeframe-cutoff-, handformule- en batch/online-paritytests.
 - CLI: `phase7 run` en `phase7 validate`.
