@@ -95,6 +95,22 @@ def test_phase7_build_is_finite_causal_and_uses_one_common_ablation_universe() -
         "price_session_regime_multitimeframe",
     )
     assert "microstructure" in result.catalog.unavailable_groups
+    volatility_flags = features[
+        [
+            "p7_regime_volatility_low",
+            "p7_regime_volatility_mid",
+            "p7_regime_volatility_high",
+        ]
+    ]
+    trend_flags = features[
+        [
+            "p7_regime_trend_down",
+            "p7_regime_trend_range",
+            "p7_regime_trend_up",
+        ]
+    ]
+    assert volatility_flags.sum(axis=1).eq(1.0).all()
+    assert trend_flags.sum(axis=1).eq(1.0).all()
     final_names = set(result.catalog.variants["price_session_regime_multitimeframe"])
     assert final_names == set(result.catalog.feature_names)
     for names in result.catalog.variants.values():
