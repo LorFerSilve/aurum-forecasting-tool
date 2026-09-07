@@ -418,17 +418,36 @@ def _regime_features(
     shock_score = one_return.abs() / shock_scale.replace(0.0, np.nan)
 
     values = pd.DataFrame(index=frame.index)
+    volatility_ready = low_threshold.notna() & high_threshold.notna()
+    trend_ready = trend_score.notna()
+    shock_ready = shock_score.notna()
+
     values["p7_regime_volatility_low"] = (volatility < low_threshold).astype("float64")
     values["p7_regime_volatility_mid"] = (
         (volatility >= low_threshold) & (volatility <= high_threshold)
     ).astype("float64")
     values["p7_regime_volatility_high"] = (volatility > high_threshold).astype("float64")
+    values.loc[
+        ~volatility_ready,
+        [
+            "p7_regime_volatility_low",
+            "p7_regime_volatility_mid",
+            "p7_regime_volatility_high",
+        ],
+    ] = np.nan
+
     values["p7_regime_trend_score"] = trend_score
     values["p7_regime_trend_down"] = (trend_score < -1.0).astype("float64")
     values["p7_regime_trend_range"] = trend_score.abs().le(1.0).astype("float64")
     values["p7_regime_trend_up"] = (trend_score > 1.0).astype("float64")
+    values.loc[
+        ~trend_ready,
+        ["p7_regime_trend_down", "p7_regime_trend_range", "p7_regime_trend_up"],
+    ] = np.nan
+
     values["p7_regime_shock_score"] = shock_score
     values["p7_regime_shock"] = (shock_score >= 3.0).astype("float64")
+    values.loc[~shock_ready, "p7_regime_shock"] = np.nan
 
     formulas = {
         "p7_regime_volatility_low": "rv20 below trailing prior one-third quantile",
@@ -579,33 +598,37 @@ def build_phase7_features(
     if tuple(variants) != _VARIANT_ORDER:
         raise Phase7FeatureBuildError("ablation variant order changed unexpectedly")
 
-    stable_catalog = {
+    unavailable_groups: dict[str, str] = {
+        "microstructure": (
+            "disabled: HistData development source is bid-only and does not provide "
+            "reliable ask, spread or tick-count history"
+        )
+    }
+    stable_catalog: dict[str, object] = {
         "schema_version": 1,
         "feature_protocol": config.feature_protocol,
         "anchor_timeframe": config.anchor_timeframe,
         "config": config.model_dump(mode="json"),
         "definitions": [item.model_dump(mode="json") for item in definitions],
         "variants": {key: list(value) for key, value in variants.items()},
-        "unavailable_groups": {
-            "microstructure": (
-                "disabled: HistData development source is bid-only and does not provide "
-                "reliable ask, spread or tick-count history"
-            )
-        },
+        "unavailable_groups": unavailable_groups,
     }
     catalog = Phase7FeatureCatalog(
         feature_spec_version=content_version(stable_catalog),
         definitions=tuple(definitions),
         variants=variants,
-        unavailable_groups=stable_catalog["unavailable_groups"],
+        unavailable_groups=unavailable_groups,
     )
     if len(set(catalog.feature_names)) != len(catalog.feature_names):
         raise Phase7FeatureBuildError("phase-7 feature names are not unique")
 
     feature_matrix = combined.loc[:, list(catalog.feature_names)]
-    finite = np.isfinite(feature_matrix.to_numpy(dtype=np.float64)).all(axis=1)
+    finite = pd.Series(
+        np.isfinite(feature_matrix.to_numpy(dtype=np.float64)).all(axis=1),
+        index=combined.index,
+    )
     source_complete = combined[availability_columns + window_columns].notna().all(axis=1)
-    valid = pd.Series(finite, index=combined.index) & source_complete
+    valid = finite & source_complete
     for available in availability_columns:
         valid &= combined[available].le(combined["prediction_time_utc"])
 
