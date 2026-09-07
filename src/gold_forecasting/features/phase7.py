@@ -379,7 +379,7 @@ def _session_features(
             formula=formulas[name],
             lookback_candles=1,
         )
-        for name in values
+        for name in formulas
     )
     return values, definitions
 
@@ -472,7 +472,7 @@ def _regime_features(
                 else 21
             ),
         )
-        for name in values
+        for name in formulas
     )
     return values, definitions
 
