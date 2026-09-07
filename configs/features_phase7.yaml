@@ -1,0 +1,22 @@
+schema_version: 1
+feature_protocol: phase7-v1
+anchor_timeframe: 3min
+
+# Windows are deliberately shorter for slow timeframes.  With the current
+# observed-row calendar policy, long contiguous 3h windows would discard most
+# of every week after the weekend gap.
+timeframe_windows:
+  3min: [2, 5, 10, 20]
+  5min: [2, 5, 10, 20]
+  15min: [2, 4, 8, 16]
+  30min: [2, 4, 8, 12]
+  1h: [2, 4, 8]
+  3h: [2, 3, 5]
+
+return_lags: [1, 2, 3]
+regime_lookback_candles: 80
+staleness_multiplier: 1.0
+zero_range_close_position: 0.5
+
+# HistData is bid-only.  Do not synthesize ask/spread/tick-count history.
+microstructure_enabled: false
