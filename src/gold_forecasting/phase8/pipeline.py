@@ -440,9 +440,7 @@ def _evaluate_fold(
                     )
                 )["macro_f1"],
             }
-        chosen_epoch = int(
-            round(median(seed_epochs))
-        )
+        chosen_epoch = round(median(seed_epochs))
         selected_epochs[seed] = max(
             1,
             chosen_epoch,
@@ -627,7 +625,8 @@ def _render_summary(
     lines.extend(
         [
             "",
-            "Neural promotion is development-only. No phase-8 result activates paper or live trading.",
+            "Neural promotion is development-only. No phase-8 result activates "
+            "paper or live trading.",
             "Probabilities remain uncalibrated until phase 11.",
         ]
     )

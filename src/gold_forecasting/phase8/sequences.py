@@ -249,9 +249,9 @@ def subset_phase8_sequences(
 
 
 __all__ = [
+    "SEQUENCE_FEATURE_NAMES",
     "Phase8SequenceBuildResult",
     "Phase8SequenceError",
-    "SEQUENCE_FEATURE_NAMES",
     "SequenceFrame",
     "build_phase8_sequences",
     "build_timeframe_sequences",

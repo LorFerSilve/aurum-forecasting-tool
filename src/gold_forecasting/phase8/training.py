@@ -7,9 +7,10 @@ import math
 import os
 import random
 import time
+from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -23,8 +24,8 @@ from gold_forecasting.classification import validate_probability_matrix
 from gold_forecasting.phase8.config import Phase8Config
 from gold_forecasting.phase8.model import MultiTimeframeGRU
 from gold_forecasting.phase8.sequences import (
-    Phase8SequenceBuildResult,
     SEQUENCE_FEATURE_NAMES,
+    Phase8SequenceBuildResult,
 )
 
 
