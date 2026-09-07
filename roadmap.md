@@ -809,7 +809,7 @@ Meer bruikbare marktstructuur toevoegen zonder meteen externe bronnen of een zwa
 
 #### Lichte microstructure
 
-> **Geblokkeerd in phase7-v1:** de huidige HistData-bron is bid-only en levert geen betrouwbare historische ask, spread of tick count. Deze waarden worden niet gesynthetiseerd; ze vereisen een nieuwe databron/challenger.
+> **Geblokkeerd in phase7-v2:** de huidige HistData-bron is bid-only en levert geen betrouwbare historische ask, spread of tick count. Deze waarden worden niet gesynthetiseerd; ze vereisen een nieuwe databron/challenger.
 
 - [ ] Absolute spread en spread in basispunten.
 - [ ] Historische spread-z-score.
@@ -868,7 +868,11 @@ Na iedere stap:
 - [x] Scalers fitten uitsluitend op train via de ongewijzigde fase-6 evaluate_fold/modelpipeline.
 - [x] Featuredistributies worden per fold vergeleken en als artefact opgeslagen.
 
-### Implementatiestatus — phase7-v1
+### Implementatiestatus — phase7-v2
+
+`phase7-v2` vervangt de onvoltooide v1-prebenchmark. De wijziging houdt dezelfde
+MVP-geankerde timestamps voor alle ablations aan en behandelt sparse rijkere features
+via train-only mediaanimputatie; v1 leverde geen voltooide benchmarkbeslissing op.
 
 De featurebuilder, gemeenschappelijke ablation-universe, CLI, auditcatalogus, distributierapportage
 en leakage/parity-tests zijn geïmplementeerd. De volledige benchmark kan niet uit GitHub alleen
