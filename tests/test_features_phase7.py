@@ -102,7 +102,8 @@ def test_phase7_build_is_finite_causal_and_uses_one_common_ablation_universe() -
     features = result.features
 
     assert not features.empty
-    assert result.diagnostics["nonfinite_output_values"] == 0
+    assert result.diagnostics["infinite_output_values"] == 0
+    assert result.diagnostics["output_rows"] == result.diagnostics["anchor_mvp_rows"]
     assert features["feature_available_at_utc"].le(features["prediction_time_utc"]).all()
     assert tuple(result.catalog.variants) == (
         "mvp",
@@ -126,12 +127,34 @@ def test_phase7_build_is_finite_causal_and_uses_one_common_ablation_universe() -
             "p7_regime_trend_up",
         ]
     ]
-    assert volatility_flags.sum(axis=1).eq(1.0).all()
-    assert trend_flags.sum(axis=1).eq(1.0).all()
+    volatility_ready = volatility_flags.dropna()
+    trend_ready = trend_flags.dropna()
+    assert not volatility_ready.empty
+    assert not trend_ready.empty
+    assert volatility_ready.sum(axis=1).eq(1.0).all()
+    assert trend_ready.sum(axis=1).eq(1.0).all()
     final_names = set(result.catalog.variants["price_session_regime_multitimeframe"])
     assert final_names == set(result.catalog.feature_names)
     for names in result.catalog.variants.values():
         assert set(names) <= final_names
+
+
+def test_sparse_slow_timeframe_does_not_change_common_prediction_universe() -> None:
+    inputs = _inputs()
+    config = _phase7_config()
+    baseline = build_phase7_features(inputs, _mvp_config(), config).features
+
+    changed = {name: frame.copy(deep=True) for name, frame in inputs.items()}
+    changed["3h"] = changed["3h"].drop(index=changed["3h"].index[5]).reset_index(drop=True)
+    sparse = build_phase7_features(changed, _mvp_config(), config).features
+
+    pd.testing.assert_series_equal(
+        sparse["prediction_time_utc"],
+        baseline["prediction_time_utc"],
+    )
+    assert sparse["p7_3h_momentum_3_bps"].isna().sum() > baseline[
+        "p7_3h_momentum_3_bps"
+    ].isna().sum()
 
 
 def test_phase7_future_mutation_does_not_change_older_feature_rows() -> None:
@@ -174,7 +197,9 @@ def test_phase7_online_helper_matches_batch_builder_exactly() -> None:
 def test_phase7_three_minute_momentum_matches_hand_calculation() -> None:
     inputs = _inputs()
     result = build_phase7_features(inputs, _mvp_config(), _phase7_config())
-    row = result.features.iloc[0]
+    row = result.features.loc[
+        result.features["p7_3min_momentum_3_bps"].notna()
+    ].iloc[0]
     prediction = row["prediction_time_utc"]
     source = inputs["3min"]
     index = source.index[source["timestamp_close_utc"].eq(prediction)].item()
