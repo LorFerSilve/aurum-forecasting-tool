@@ -24,7 +24,7 @@ class Phase7Config(BaseModel):
     output_directory: str = "reports/phase7_runs"
 
     @model_validator(mode="after")
-    def validate_scope(self) -> "Phase7Config":
+    def validate_scope(self) -> Phase7Config:
         if not self.horizons or tuple(sorted(set(self.horizons))) != self.horizons:
             raise ValueError("horizons must be nonempty, sorted and unique")
         if not set(self.horizons) <= {3, 6, 9, 12, 15, 30, 60, 180}:
