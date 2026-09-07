@@ -26,10 +26,10 @@ Daarna vervangen of versterken we telkens één onderdeel. Na iedere fase blijft
 | Onderdeel | Huidige status |
 |---|---|
 | Systeemontwerp | Afgerond in `project_idea.md` |
-| Roadmap | Fasen 0–6 uitgevoerd en geverifieerd; bronbeperking voor dag/maand vastgelegd |
-| Implementatie | Research-MVP, geharde intraday-datalaag en fase-6-benchmark voltooid |
-| Huidige release | `v0.1.0`; fase-6-resultaten zijn voorbereid voor `v0.2` |
-| Eerstvolgende stap | Fase 7 — rijkere price-only features en regimes |
+| Roadmap | Fasen 0–6 geverifieerd; fase-7-implementatie gereed, empirische benchmark nog vereist |
+| Implementatie | Research-MVP, geharde datalaag, fase-6-benchmark en fase-7 challengerlaag aanwezig |
+| Huidige release | `v0.1.0`; `v0.2` vereist nog de volledige fase-7-run en promotiebeslissing |
+| Eerstvolgende stap | Volledige fase-7-ablationbenchmark uitvoeren en verifiëren |
 | Standaard einddoel | Professioneel paper-trading-systeem |
 | Echte orders | Afzonderlijke, optionele laatste fase |
 
@@ -800,14 +800,16 @@ Meer bruikbare marktstructuur toevoegen zonder meteen externe bronnen of een zwa
 
 #### Prijs en candles
 
-- [ ] Returns en lags per timeframe.
-- [ ] Body, range, wicks en closepositie.
-- [ ] Momentum over meerdere lookbacks.
-- [ ] Afstand tot rolling gemiddelden.
-- [ ] Rolling realized volatility.
-- [ ] Breakout- en mean-reversioncontext.
+- [x] Returns en lags per timeframe.
+- [x] Body, range, wicks en closepositie.
+- [x] Momentum over meerdere lookbacks.
+- [x] Afstand tot rolling gemiddelden.
+- [x] Rolling realized volatility.
+- [x] Breakout- en mean-reversioncontext.
 
 #### Lichte microstructure
+
+> **Geblokkeerd in phase7-v1:** de huidige HistData-bron is bid-only en levert geen betrouwbare historische ask, spread of tick count. Deze waarden worden niet gesynthetiseerd; ze vereisen een nieuwe databron/challenger.
 
 - [ ] Absolute spread en spread in basispunten.
 - [ ] Historische spread-z-score.
@@ -819,18 +821,18 @@ Meer bruikbare marktstructuur toevoegen zonder meteen externe bronnen of een zwa
 
 #### Tijd en sessie
 
-- [ ] Aziatische, Europese en Amerikaanse sessie.
-- [ ] Sessiesoverlap.
-- [ ] Uur-, weekdag- en maandcontext.
+- [x] Aziatische, Europese en Amerikaanse sessie.
+- [x] Sessiesoverlap.
+- [x] Uur-, weekdag- en maandcontext.
 - [ ] Tijd sinds marktopening en tot marktsluiting waar relevant.
 
 #### Eenvoudige regimes
 
-- [ ] Volatility bucket.
-- [ ] Trend score.
+- [x] Volatility bucket.
+- [x] Trend score.
 - [ ] Spread/liquidity bucket.
-- [ ] Sessie-ID.
-- [ ] Recente gap- of shockindicator.
+- [x] Overlap-aware sessiecontext via one-hot sessievelden.
+- [x] Recente shockindicator.
 
 ### Multi-timeframe regels
 
@@ -859,12 +861,19 @@ Na iedere stap:
 
 ### Verificatie
 
-- [ ] Future-data mutation test per featuregroep.
-- [ ] Batch/online-pariteit voor dezelfde timestamp.
-- [ ] Rolling formules worden op kleine voorbeelden handmatig getest.
-- [ ] NaN, infinite en extreme waarden worden gerapporteerd.
-- [ ] Scalers fitten uitsluitend op train.
-- [ ] Featuredistributies worden per fold vergeleken.
+- [x] Future-data mutation tests voor de volledige catalogus en hogere-timeframe alignment.
+- [x] Batch/online-pariteit voor dezelfde timestamp.
+- [x] Rolling formules worden op kleine voorbeelden handmatig getest.
+- [x] NaN/non-finite waarden en coverage worden gerapporteerd; fold-distributies tonen extremen.
+- [x] Scalers fitten uitsluitend op train via de ongewijzigde fase-6 evaluate_fold/modelpipeline.
+- [x] Featuredistributies worden per fold vergeleken en als artefact opgeslagen.
+
+### Implementatiestatus — phase7-v1
+
+De featurebuilder, gemeenschappelijke ablation-universe, CLI, auditcatalogus, distributierapportage
+en leakage/parity-tests zijn geïmplementeerd. De volledige benchmark kan niet uit GitHub alleen
+worden afgerond omdat raw/curated marktdata bewust niet in versiebeheer staan. De onderstaande
+exitcriteria blijven daarom open tot een geslaagde lokale `phase7 run` en verificatie.
 
 ### Exitcriteria
 
