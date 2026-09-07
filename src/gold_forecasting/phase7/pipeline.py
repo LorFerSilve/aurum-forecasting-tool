@@ -40,9 +40,17 @@ from gold_forecasting.features.phase7 import (
 )
 from gold_forecasting.labels.multihorizon import build_horizon_labels
 from gold_forecasting.phase7.config import Phase7Config, load_phase7_config
-from gold_forecasting.registry import RunRegistry
+from gold_forecasting.registry import RunRegistry, get_git_code_version
 
 _TIMEFRAMES = ("1min", "3min", "5min", "15min", "30min", "1h", "3h")
+
+
+def _require_clean_code_version(code_version: str) -> None:
+    if code_version in {"unavailable", "uncommitted"} or code_version.endswith("+dirty"):
+        raise RuntimeError(
+            "formal phase-7 runs require a clean committed Git working tree; "
+            f"found {code_version!r}"
+        )
 
 
 def _benchmark_config(config: Phase7Config) -> BenchmarkConfig:
@@ -204,6 +212,8 @@ def run_phase7(config_path: str | Path) -> Path:
     feature_config = load_phase7_feature_config(path.parent / config.features_config)
     benchmark_config = _benchmark_config(config)
     root = project.config_path.parent.parent
+    expected_code_version = get_git_code_version(root)
+    _require_clean_code_version(expected_code_version)
 
     preflight_development_inputs(project)
     validate_existing_mvp_data(project.config_path)
@@ -227,13 +237,10 @@ def run_phase7(config_path: str | Path) -> Path:
     print(f"Phase-7 run: {output}", flush=True)
 
     try:
-        if (
-            record.code_version in {"unavailable", "uncommitted"}
-            or record.code_version.endswith("+dirty")
-        ):
+        if record.code_version != expected_code_version:
             raise RuntimeError(
-                "formal phase-7 runs require a clean committed Git working tree; "
-                f"found {record.code_version!r}"
+                "Git identity changed during phase-7 preflight: "
+                f"{expected_code_version!r} -> {record.code_version!r}"
             )
         write_json_atomic(output / "resolved_config.json", config.model_dump(mode="json"))
         write_json_atomic(
