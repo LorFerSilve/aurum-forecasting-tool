@@ -1,6 +1,13 @@
 # Researchprotocol — fase 7, richer price-only features
 
+**Protocol:** `phase7-v2`
+
 ## Status
+
+`phase7-v2` vervangt de niet-voltooide `phase7-v2`-implementatie nadat een pre-benchmark
+coveragefout aantoonde dat de doorsnede van alle hogere-timeframefeatures een geldige
+inner fold volledig kon leegtrekken. Er was geen voltooide phase-7-benchmark en er is
+geen resultaat gebruikt om deze wijziging te kiezen.
 
 Dit protocol is een ontwikkelingscontract voor fase 7. De finale holdout vanaf
 2025-01-01 UTC blijft gesloten. Fase 7 mag uitsluitend de reeds toegelaten
@@ -68,7 +75,7 @@ onvoldoende historiek behandelt.
 
 De huidige HistData-bron is bid-only en levert geen betrouwbare historische ask,
 spread of tick count. Daarom zijn de volgende roadmapfeatures expliciet niet
-toegestaan in phase7-v1:
+toegestaan in phase7-v2:
 
 - absolute/historische spread;
 - ask- en mid-return;
