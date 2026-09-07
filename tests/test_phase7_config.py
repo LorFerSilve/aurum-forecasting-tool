@@ -14,6 +14,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 def test_phase7_repository_config_preserves_phase6_development_contract() -> None:
     config = load_phase7_config(PROJECT_ROOT / "configs" / "phase7.yaml")
 
+    assert config.protocol_version == "phase7-v2"
     assert config.seed == 20260906
     assert config.horizons == (3, 6, 9, 12, 15, 30, 60, 180)
     assert config.test_years == (2022, 2023, 2024)
