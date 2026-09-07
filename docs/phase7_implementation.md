@@ -23,7 +23,7 @@
 - Catalogus met formule, timeframe, lookback en availability-regel.
 - Future-mutation-, higher-timeframe-cutoff-, handformule- en batch/online-paritytests.
 - CLI: `phase7 run` en `phase7 validate`.
-- Artifact hashing, source snapshots en gesloten-holdoutverificatie.
+- Artifact hashing, source snapshots, gesloten-holdoutverificatie en een fail-closed clean-Git gate voor formele benchmarkruns.
 
 ## Bewust niet geïmplementeerd
 
