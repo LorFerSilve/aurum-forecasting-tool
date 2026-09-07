@@ -1,5 +1,5 @@
 schema_version: 1
-feature_protocol: phase7-v1
+feature_protocol: phase7-v2
 anchor_timeframe: 3min
 
 # Windows are deliberately shorter for slow timeframes.  With the current
