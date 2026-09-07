@@ -6,6 +6,7 @@ import pytest
 from pydantic import ValidationError
 
 from gold_forecasting.phase7.config import Phase7Config, load_phase7_config
+from gold_forecasting.phase7.pipeline import _require_clean_code_version
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
@@ -23,3 +24,13 @@ def test_phase7_repository_config_preserves_phase6_development_contract() -> Non
 def test_phase7_config_rejects_final_holdout_year() -> None:
     with pytest.raises(ValidationError):
         Phase7Config(test_years=(2022, 2023, 2024, 2025))
+
+
+@pytest.mark.parametrize("code_version", ["unavailable", "uncommitted", "a" * 40 + "+dirty"])
+def test_phase7_formal_run_rejects_unreproducible_git_identity(code_version: str) -> None:
+    with pytest.raises(RuntimeError):
+        _require_clean_code_version(code_version)
+
+
+def test_phase7_formal_run_accepts_clean_commit_identity() -> None:
+    _require_clean_code_version("a" * 40)
