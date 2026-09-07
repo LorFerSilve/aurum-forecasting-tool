@@ -21,6 +21,16 @@ def test_phase7_repository_config_preserves_phase6_development_contract() -> Non
     assert config.features_config == "features_phase7.yaml"
 
 
+def test_phase7_generated_run_directory_is_gitignored() -> None:
+    config = load_phase7_config(PROJECT_ROOT / "configs" / "phase7.yaml")
+    ignore_rules = {
+        line.strip()
+        for line in (PROJECT_ROOT / ".gitignore").read_text(encoding="utf-8").splitlines()
+    }
+
+    assert f"{config.output_directory}/**" in ignore_rules
+
+
 def test_phase7_config_rejects_final_holdout_year() -> None:
     with pytest.raises(ValidationError):
         Phase7Config(test_years=(2022, 2023, 2024, 2025))
