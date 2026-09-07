@@ -11,7 +11,7 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Self
 
 import numpy as np
 import pandas as pd
@@ -62,7 +62,7 @@ class Phase7FeatureConfig(BaseModel):
         return values
 
     @model_validator(mode="after")
-    def validate_timeframe_budget(self) -> Phase7FeatureConfig:
+    def validate_timeframe_budget(self) -> Self:
         if tuple(self.timeframe_windows) != _ALLOWED_TIMEFRAMES:
             raise ValueError(
                 "timeframe_windows must contain exactly, in order: "
