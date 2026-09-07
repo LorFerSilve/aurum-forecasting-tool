@@ -1,8 +1,13 @@
 # Fase 7 — implementatiestatus
 
-**Protocol:** `phase7-v1`  
+**Protocol:** `phase7-v2`  
 **Release:** nog steeds `v0.1.0`  
 **Empirische status:** volledige 2020–2024 ablationbenchmark nog niet uitgevoerd
+
+`phase7-v1` heeft geen geldige eindrun opgeleverd. Tijdens de eerste lokale benchmark
+werd een lege inner fold ontdekt doordat sparse hogere-timeframefeatures de common
+sample-universe te sterk reduceerden. Dit is vóór resultaatselectie gecorrigeerd en
+formeel geversioneerd als `phase7-v2`.
 
 ## Wat is geïmplementeerd
 
