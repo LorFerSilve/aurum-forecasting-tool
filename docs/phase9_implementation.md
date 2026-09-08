@@ -21,14 +21,27 @@
 - pinball loss;
 - temporal-consistency Huber loss;
 - hard phase-9 parameterbudget;
-- unit tests voor targettiming, gaps, holdout, reconstructie, quantielen, losses en budget.
+- train-only path- en aggregate-targetscaling;
+- common 15min sample-universe die executable direction/return-labels en path-labels exact joint;
+- behoud van dezelfde 15min `sample_id`-semantiek voor latere baseline-pariteit;
+- Phase-9 train/predict engine met AdamW, deterministic seeds, AMP-overflowherstel,
+  gradient clipping en early stopping op validation macro-F1;
+- gecombineerde direction/return/range/volatility/path/aggregate/cumulative/consistency losses;
+- atomaire Phase-9 checkpoints met beide normalizers en AMP/optimizer-auditmetadata;
+- path-evaluatie voor q50-MAE, q10-q90 coverage, intervalbreedte,
+  reconstructed-OHLC-fout en cumulatieve 15min-returnfout;
+- expliciete UTC-dtypes voor alle future-path timestamps;
+- unit tests voor targettiming, gaps, holdout, reconstructie, quantielen, losses,
+  train-only scaling, common universe, training, reproduceerbaarheid en budget.
 
 ## Bewust nog niet geopend
 
 Er is nog geen formele `phase9 run` CLI en geen empirische promotion decision. Eerst moet
 de canonieke phase-8 benchmark volledig gevalideerd en als expliciete reference vastgezet
-worden. Daarna worden training/evaluation, recursive one-step baseline en de formele
-walk-forward benchmark toegevoegd.
+worden. De train/predict- en evaluatiebouwstenen bestaan al, maar worden nog niet als
+formele benchmark geëxposeerd. Daarna worden de outer walk-forward orchestration,
+exacte Phase-8/Phase-7 common-sample comparison, recursive one-step baseline en de
+formele run/validate-flow toegevoegd.
 
 De lokale `codex/phase9-path-research` branch van een andere agent bestaat momenteel
 niet op GitHub. De bijbehorende stash blijft daarom apart bewaard en wordt na de lopende
