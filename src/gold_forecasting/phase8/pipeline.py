@@ -80,17 +80,18 @@ def _require_clean_code_version(code_version: str) -> None:
 
 
 def _locked_runtime_versions(root: Path) -> dict[str, str]:
-    """Read the frozen versions for phase-8 runtime packages from requirements.lock."""
+    """Read frozen core and neural public versions from their lock files."""
 
-    lock_path = root / "requirements.lock"
     versions: dict[str, str] = {}
     pattern = re.compile(r"^([A-Za-z0-9_.-]+)==([^\s;]+)")
-    for raw_line in lock_path.read_text(encoding="utf-8").splitlines():
-        match = pattern.match(raw_line.strip())
-        if match is None:
-            continue
-        name = match.group(1).lower().replace("_", "-")
-        versions[name] = match.group(2)
+    for lock_name in ("requirements.lock", "requirements-neural.lock"):
+        lock_path = root / lock_name
+        for raw_line in lock_path.read_text(encoding="utf-8").splitlines():
+            match = pattern.match(raw_line.strip())
+            if match is None:
+                continue
+            name = match.group(1).lower().replace("_", "-")
+            versions[name] = match.group(2)
     missing = [
         name
         for name in _RUNTIME_DEPENDENCIES
@@ -98,7 +99,7 @@ def _locked_runtime_versions(root: Path) -> dict[str, str]:
     ]
     if missing:
         raise RuntimeError(
-            "requirements.lock is missing phase-8 runtime pins: "
+            "runtime lock files are missing phase-8 pins: "
             + ", ".join(missing)
         )
     return {
@@ -1139,6 +1140,12 @@ def run_phase8(
             output / "requirements.lock",
             (
                 root / "requirements.lock"
+            ).read_text(encoding="utf-8"),
+        )
+        write_text_atomic(
+            output / "requirements-neural.lock",
+            (
+                root / "requirements-neural.lock"
             ).read_text(encoding="utf-8"),
         )
         write_json_atomic(

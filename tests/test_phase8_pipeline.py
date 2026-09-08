@@ -77,12 +77,21 @@ def _write_runtime_lock(tmp_path) -> dict[str, str]:
         "torch": "2.11.0",
         "pyarrow": "23.0.1",
     }
+    core = {
+        name: version
+        for name, version in expected.items()
+        if name != "torch"
+    }
     (tmp_path / "requirements.lock").write_text(
         "\n".join(
             f"{name}=={version}"
-            for name, version in expected.items()
+            for name, version in core.items()
         )
         + "\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "requirements-neural.lock").write_text(
+        "torch==2.11.0\n",
         encoding="utf-8",
     )
     return expected
