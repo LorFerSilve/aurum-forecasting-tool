@@ -180,6 +180,32 @@ wordt de eenvoudigere direction/return-architectuur behouden.
 
 Geen phase-9-uitkomst activeert paper of live trading.
 
+## Canonieke benchmarkuitkomst
+
+De canonieke run `20260908T211301827616Z-ad6b573c` is afgerond en gevalideerd.
+Het vooraf vastgelegde promotiecontract resulteert in:
+
+- `keep_phase7_champion`;
+- Phase-9 direct: `retain_research_distribution_only`;
+- Phase-9 recursive: `do_not_carry_as_default`;
+- economic promotion: `false`;
+- paper/live activation: `false`;
+- finale holdout: gesloten.
+
+Direct verbetert mean macro-F1 slechts marginaal versus de frozen Phase-8 neural
+reference (+0,002397), terwijl de worst-fold macro-F1 verslechtert (-0,003099).
+Tegenover de Phase-7 champion blijft mean macro-F1 ongeveer 0,103 lager en worst-fold
+macro-F1 ongeveer 0,118 lager. Alle policies selecteren cash/no-trade.
+
+De marginale q10-q90 pathcoverage van direct ligt wel dicht bij de nominale 80%
+(78,92% per pathcomponent en 79,75% voor aggregate componenten). Daarom mag de direct
+path-head als research/distributionele output worden bewaard, maar dit geldt niet als
+bewijs van directionele of economische edge. Fysieke high/low/range intervalcoverage
+wordt niet afgeleid uit niet-joint marginale quantielen en wordt pas na latere
+distributionele calibratie/sampling verantwoord onderzocht.
+
+Zie `docs/phase9_verification.md`.
+
 ## Verificatie vóór formele benchmark
 
 - exact vijf toekomstige 3min-candles per geldige sample;

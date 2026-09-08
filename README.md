@@ -127,7 +127,7 @@ Zie het [Phase-8 protocol](docs/research_protocol_phase8.md), het
 [verificatierapport](docs/phase8_verification.md) en de
 [implementatiestatus](docs/phase8_implementation.md).
 
-### Fase 9 — direct future-candle path (in ontwikkeling)
+### Fase 9 — direct future-candle path (afgerond)
 
 Op `feature/phase-9-future-path` staat inmiddels de structurele Phase-9 keten:
 vijf toekomstige 3min-candles, geordende 10/50/90%-quantielen, geldige OHLC-
@@ -154,8 +154,20 @@ Na de geslaagde canonical real-data preflight is het formele benchmarkcommando b
 fail-closed preflight uit. Daarna moet de voltooide run afzonderlijk met
 `phase9 validate reports/phase9_runs/<run-id>` worden geverifieerd.
 
+De canonieke run `20260908T211301827616Z-ad6b573c` is daarna afgerond en integraal
+gevalideerd (225 bestanden; completion
+`sha256:a39fb334233a27c5fea65d1f4269ce3134f24bf9d89c2530b8998f5465a0a776`).
+
+Phase-9 direct verbetert probability scores ten opzichte van Phase 7, maar de
+directionele macro-F1 blijft duidelijk slechter. Tegen Phase 8 is de gemiddelde
+macro-F1 slechts marginaal hoger en de slechtste fold slechter. Alle policies blijven
+cash/no-trade. De Phase-7 15m champion blijft daarom actief. De direct path-head wordt
+alleen als research/distributionele output behouden; recursive wordt niet als
+standaardvariant meegenomen. De finale 2025+ holdout bleef gesloten.
+
 De canonieke Phase-7/8 references zijn cryptografisch gepind in `phase9-v1`. Zie
-[het fase-9-protocol](docs/research_protocol_phase9.md) en de
+[het fase-9-protocol](docs/research_protocol_phase9.md),
+[het verificatierapport](docs/phase9_verification.md) en de
 [implementatiestatus](docs/phase9_implementation.md).
 
 `data import` downloadt uitsluitend de uit `configs/splits_mvp.yaml` afgeleide

@@ -26,10 +26,10 @@ Daarna vervangen of versterken we telkens één onderdeel. Na iedere fase blijft
 | Onderdeel | Huidige status |
 |---|---|
 | Systeemontwerp | Afgerond in `project_idea.md` |
-| Roadmap | Fasen 0–8 geverifieerd; fase 9 heeft een geslaagde canonical preflight en een guarded formal-run orchestration |
-| Implementatie | `v0.2.0` blijft champion; Phase-9 future-path benchmarkcode is klaar voor de canonieke formele run |
+| Roadmap | Fasen 0–9 geverifieerd; fase 10 is de volgende ontwikkelfase |
+| Implementatie | `v0.2.0` blijft champion; Phase-9 direct path is alleen research/distributionele output |
 | Huidige release | `v0.2.0` — betrouwbare price-only researchbenchmark |
-| Eerstvolgende stap | Canonieke Phase-9 benchmark uitvoeren, daarna `phase9 validate` en promotion review |
+| Eerstvolgende stap | Phase 9 branch afronden/mergen en daarna fase 10 openen |
 | Monte Carlo | Voorstel geaccepteerd; predictive MC in fase 12 na OOF/calibratie, strategy MC in fase 13 |
 | Standaard einddoel | Professioneel paper-trading-systeem |
 | Echte orders | Afzonderlijke, optionele laatste fase |
@@ -975,6 +975,9 @@ Zie [het formele Phase-8 verificatierapport](docs/phase8_verification.md).
 
 ## Fase 9 — Directe future-candle-path van vijf 3min-candles
 
+**Status:** ✅ technisch en empirisch afgerond  
+**Canonieke run:** `20260908T211301827616Z-ad6b573c`  
+**Besluit:** `keep_phase7_champion_retain_direct_path_research_only`  
 **Inspanning:** L  
 **Release:** onderdeel van `v0.3`  
 **Afhankelijkheden:** fase 8 ✅ — canonieke reference `20260908T020044407464Z-24f4c0d4`
@@ -1022,7 +1025,7 @@ Meer fouten produceren dus meer leersignaal, maar we maken backpropagation niet 
 - [x] Quantile coverage en intervalbreedte.
 - [x] Consistency tussen het pad en de directe 15min-head.
 - [x] Vergelijk direct multi-step met recursief one-step.
-- [ ] Meet in de formele benchmark of de path-head de uiteindelijke direction, calibration of nettoresultaten verbetert.
+- [x] Meet in de formele benchmark of de path-head de uiteindelijke direction, calibration of nettoresultaten verbetert.
 
 ### Promotiebesluit
 
@@ -1036,11 +1039,28 @@ De path-head blijft in de champion wanneer hij over meerdere folds:
 
 Anders blijft direction/return de champion en wordt future path een optionele onderzoeksoutput.
 
+### Empirische uitkomst
+
+- Phase-9 direct mean macro-F1: **0,321661**; frozen Phase 7: **0,425044**.
+- Direct verbetert slechts marginaal versus Phase 8 op mean macro-F1 (+0,002397),
+  terwijl worst-fold macro-F1 verslechtert (-0,003099).
+- Direct q10-q90 coverage ligt dicht bij nominaal: **78,92%** per pathcomponent en
+  **79,75%** voor aggregate componenten.
+- Direct is geometrisch/coherent sterker dan recursive en blijft daarom de enige
+  pathvariant die als researchoutput wordt bewaard.
+- Alle Phase-9 policies blijven cash/no-trade: 0 trades, 0 exposure, geen economic promotion.
+- Fysieke high/low/range intervalcoverage blijft bewust ongeclaimd totdat een joint
+  distributionele methode in latere fasen beschikbaar is.
+
 ### Exitcriteria
 
-- Alle gereconstrueerde candles voldoen aan OHLC-invarianten.
-- De vijf timestamps en aggregatie naar 15 minuten zijn correct.
-- Het nut of gebrek aan nut van future-path learning is eerlijk aangetoond.
+- [x] Alle gereconstrueerde candles voldoen aan OHLC-invarianten.
+- [x] De vijf timestamps en aggregatie naar 15 minuten zijn correct.
+- [x] Het nut en de beperkingen van future-path learning zijn eerlijk aangetoond.
+- [x] Championbesluit is vastgelegd: Phase 7 blijft actief; direct path is research-only.
+- [x] Finale 2025+ holdout bleef gesloten.
+
+Zie [het Phase-9 verificatierapport](docs/phase9_verification.md).
 
 ### Monte Carlo-handoff
 

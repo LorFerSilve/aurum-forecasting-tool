@@ -2,7 +2,7 @@
 
 **Protocol:** `phase9-v1`  
 **Branch:** `feature/phase-9-future-path`  
-**Empirische status:** canonieke real-data preflight geslaagd; formele Phase-9 benchmark nog niet uitgevoerd
+**Empirische status:** canonieke benchmark afgerond en gevalideerd; geen championpromotie, direct path behouden als researchoutput
 
 ## Reeds geïmplementeerd
 
@@ -59,17 +59,28 @@
 
 ## Formele benchmarkstatus
 
-De canonieke real-data preflight is lokaal volledig geslaagd. Daardoor mag het formele
-`phase9 run`-commando nu bestaan. Het commando opent echter pas een RunRegistry-directory
-nadat het **zelf opnieuw** dezelfde real-data preflight heeft uitgevoerd en daarna
-code-, data-, fold-, reference- en sample-digestpariteit opnieuw heeft bevestigd.
+De canonieke run `20260908T211301827616Z-ad6b573c` is voltooid en met
+`phase9 validate` integraal geverifieerd: **225 bestanden**, completion
+`sha256:a39fb334233a27c5fea65d1f4269ce3134f24bf9d89c2530b8998f5465a0a776`.
 
-De benchmark zelf is nog niet uitgevoerd. Er is dus nog geen empirische Phase-9 promotion
-decision. De runner schrijft alle vooraf vereiste evidence en zet promotion expliciet op
-`pending_post_benchmark_review`; hij promoveert niets automatisch.
+Het formele besluit is:
 
-PR #3 blijft tot na de canonical benchmark draft. De finale 2025+ holdout blijft
-gesloten en Phase 8 blijft methodologisch frozen.
+- Phase-7 `mvp/logistic` blijft de actieve 15m researchchampion;
+- Phase-9 direct wordt niet als champion/tradingmodel gepromoveerd;
+- de direct path-head mag uitsluitend als optionele research/distributionele output
+  worden behouden;
+- recursive wordt niet als standaardarchitectuur meegenomen;
+- alle inner-selected policies blijven cash/no-trade;
+- de finale 2025+ holdout blijft gesloten.
+
+Zie `docs/phase9_verification.md` voor de volledige empirische analyse.
+
+Na de benchmark is in commit `991f5c3` uitsluitend de persisted-configvalidator
+gecorrigeerd voor JSON-keyvolgorde. Dit verandert de benchmarkmethodologie of resultaten
+niet en vereist geen nieuwe marktbenchmark.
+
+PR #3 kan na groene CI uit draft worden gehaald, maar mag pas na de gebruikelijke
+branch-protection/mergecontrole in `main` worden gemerged.
 
 ## Monte Carlo-roadmapbesluit
 
