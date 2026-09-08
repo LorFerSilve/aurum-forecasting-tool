@@ -13,6 +13,7 @@ dataset_app = typer.Typer(help="Build leakage-safe model datasets.")
 mvp_app = typer.Typer(help="Run the vertical research MVP.")
 benchmark_app = typer.Typer(help="Run the guarded phase-6 multi-horizon benchmark.")
 phase7_app = typer.Typer(help="Run phase-7 richer price-only feature ablations.")
+phase8_app = typer.Typer(help="Run the guarded phase-8 multi-timeframe neural challenger.")
 
 app.add_typer(config_app, name="config")
 app.add_typer(data_app, name="data")
@@ -20,6 +21,7 @@ app.add_typer(dataset_app, name="dataset")
 app.add_typer(mvp_app, name="mvp")
 app.add_typer(benchmark_app, name="benchmark")
 app.add_typer(phase7_app, name="phase7")
+app.add_typer(phase8_app, name="phase8")
 
 ConfigOption = Annotated[
     Path,
@@ -33,6 +35,25 @@ YearsOption = Annotated[
     str | None,
     typer.Option(help="Optional comma-separated development years, for example 2023,2024."),
 ]
+
+
+@phase8_app.command("run")
+def run_phase8_research(config: ConfigOption = Path("configs/phase8.yaml")) -> None:
+    """Run the compact neural challenger against the frozen phase-7 reference."""
+    from gold_forecasting.phase8.pipeline import run_phase8
+
+    output = run_phase8(config)
+    typer.echo(f"Completed phase 8: {output}")
+
+
+@phase8_app.command("validate")
+def validate_phase8_research(
+    run_directory: Annotated[Path, typer.Argument(exists=True, file_okay=False)],
+) -> None:
+    """Verify a completed phase-8 run and all persisted artifact hashes."""
+    from gold_forecasting.phase8.pipeline import verify_phase8
+
+    typer.echo(json.dumps(verify_phase8(run_directory), indent=2))
 
 
 @phase7_app.command("run")

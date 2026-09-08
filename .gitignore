@@ -53,6 +53,7 @@ models/**
 reports/runs/**
 reports/benchmark_runs/**
 reports/phase7_runs/**
+reports/phase8_runs/**
 reports/data/*.parquet
 
 

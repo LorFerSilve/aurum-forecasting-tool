@@ -1,0 +1,53 @@
+schema_version: 1
+protocol_version: phase8-v1
+data_config: phase5.yaml
+phase7_reference_directory: reports/phase7_runs/20260907T014255645674Z-b2afe281
+phase7_champion_config: phase7_champion.yaml
+
+horizons: [3, 6, 9, 12, 15, 30, 60, 180]
+test_years: [2022, 2023, 2024]
+seeds: [20260906, 20260907]
+
+# Compact fast/mid/slow set. Phase 7 measured only ~15.9% 3h availability,
+# so phase8-v1 excludes it instead of making the first neural baseline depend
+# heavily on imputation. 5min/30min are deferred as redundant first-pass branches.
+timeframes: [1min, 3min, 15min, 1h]
+sequence_lengths:
+  1min: 60
+  3min: 20
+  15min: 8
+  1h: 4
+
+horizon_timeframes:
+  3: [1min, 3min, 15min]
+  6: [1min, 3min, 15min]
+  9: [1min, 3min, 15min]
+  12: [1min, 3min, 15min]
+  15: [1min, 3min, 15min]
+  30: [3min, 15min, 1h]
+  60: [3min, 15min, 1h]
+  180: [3min, 15min, 1h]
+
+encoder_hidden_size: 32
+fusion_size: 32
+parameter_budget: 150000
+
+batch_size: 2048
+max_epochs: 24
+early_stopping_patience: 4
+learning_rate: 0.001
+weight_decay: 0.0001
+gradient_clip_norm: 1.0
+
+direction_loss_weight: 1.0
+return_loss_weight: 0.25
+range_loss_weight: 0.10
+volatility_loss_weight: 0.10
+class_weighting: none
+
+device: auto
+mixed_precision: true
+deterministic_algorithms: true
+num_data_workers: 0
+minimum_policy_trades: 20
+output_directory: reports/phase8_runs
