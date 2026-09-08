@@ -10,6 +10,7 @@ import time
 from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Literal
 
 import numpy as np
 import pandas as pd
@@ -36,7 +37,10 @@ from gold_forecasting.phase9.losses import (
     aggregate_path_representation_torch,
     pinball_loss,
 )
-from gold_forecasting.phase9.model import FuturePathGRU
+from gold_forecasting.phase9.model import (
+    FuturePathGRU,
+    RecursiveFuturePathGRU,
+)
 from gold_forecasting.phase9.normalization import (
     PathTargetNormalizer,
     aggregate_target_array,
@@ -74,6 +78,7 @@ class Phase9TrainingResult:
     optimizer_steps: int
     amp_skipped_steps: int
     fit_seconds: float
+    model_variant: Literal["direct", "recursive"]
 
 
 def _batch_indices(
@@ -271,6 +276,7 @@ def train_phase9_model(
     *,
     seed: int,
     forced_epochs: int | None = None,
+    model_variant: Literal["direct", "recursive"] = "direct",
 ) -> Phase9TrainingResult:
     """Fit all scaling only on train; validation may select epochs, never scales."""
 
@@ -315,7 +321,12 @@ def train_phase9_model(
             "cumulative path return target is non-finite"
         )
 
-    model = FuturePathGRU(
+    model_type = (
+        FuturePathGRU
+        if model_variant == "direct"
+        else RecursiveFuturePathGRU
+    )
+    model = model_type(
         timeframes,
         input_size=len(SEQUENCE_FEATURE_NAMES),
         hidden_size=config.encoder_hidden_size,
@@ -672,6 +683,7 @@ def train_phase9_model(
         fit_seconds=(
             time.perf_counter() - started
         ),
+        model_variant=model_variant,
     )
 
 
@@ -718,6 +730,7 @@ def save_phase9_checkpoint(
         ),
         "optimizer_steps": result.optimizer_steps,
         "amp_skipped_steps": result.amp_skipped_steps,
+        "model_variant": result.model_variant,
         "sequence_normalizer": (
             result.sequence_normalizer.as_record()
         ),

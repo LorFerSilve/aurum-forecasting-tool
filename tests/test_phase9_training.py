@@ -253,3 +253,37 @@ def test_phase9_same_seed_reproduces_cpu_predictions() -> None:
         rtol=0.0,
         atol=1e-6,
     )
+
+
+def test_recursive_phase9_training_uses_same_train_predict_contract() -> None:
+    sequences, table = _fixture(rows=18)
+    rows = np.arange(len(table), dtype=np.int64)
+    config = _config()
+
+    result = train_phase9_model(
+        sequences,
+        table,
+        rows,
+        None,
+        config,
+        seed=91,
+        forced_epochs=1,
+        model_variant="recursive",
+    )
+    prediction = predict_phase9_model(
+        result,
+        sequences,
+        rows,
+        config,
+    )
+
+    assert result.model_variant == "recursive"
+    assert prediction.path_quantiles_log_bps.shape == (
+        len(table),
+        5,
+        len(PATH_COMPONENTS),
+        3,
+    )
+    assert np.isfinite(
+        prediction.path_quantiles_log_bps
+    ).all()

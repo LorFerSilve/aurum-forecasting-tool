@@ -14,6 +14,7 @@
 - NumPy-reconstructie met gegarandeerde positieve OHLC-invarianten;
 - herbruikbare fused phase-8 representation zonder gedrag van de phase-8 outputs te wijzigen;
 - direct multi-step future-path quantile head;
+- free-running recursive one-step baseline met eigen q50-output als volgende decoder-input;
 - q10/q50/q90 ordering by construction;
 - niet-negatieve wickquantielen;
 - afzonderlijke directe 15min-candle quantile head;

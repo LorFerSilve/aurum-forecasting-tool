@@ -3,7 +3,12 @@ from __future__ import annotations
 import pytest
 import torch
 
-from gold_forecasting.phase9.model import FuturePathGRU, Phase9ModelError
+from gold_forecasting.phase9.model import (
+    FuturePathGRU,
+    Phase9ModelError,
+    RecursiveFuturePathGRU,
+    RecursiveQuantilePathHead,
+)
 
 
 def _inputs(batch: int = 6) -> tuple[dict[str, torch.Tensor], torch.Tensor]:
@@ -60,3 +65,37 @@ def test_future_path_parameter_budget_fails_closed() -> None:
             fusion_size=64,
             parameter_budget=20_000,
         )
+
+
+def test_recursive_path_head_free_runs_five_steps() -> None:
+    torch.manual_seed(23)
+    head = RecursiveQuantilePathHead(
+        12,
+    )
+    fused = torch.randn(7, 12)
+
+    output = head(fused)
+
+    assert output.shape == (7, 5, 4, 3)
+    assert torch.all(output[..., 1] >= output[..., 0])
+    assert torch.all(output[..., 2] >= output[..., 1])
+    assert torch.all(output[:, :, 2:, 0] >= 0.0)
+
+
+def test_recursive_future_path_model_matches_primary_output_contract() -> None:
+    torch.manual_seed(29)
+    model = RecursiveFuturePathGRU(
+        ("1min", "3min", "15min"),
+        input_size=6,
+        hidden_size=16,
+        fusion_size=12,
+        parameter_budget=100_000,
+    )
+    sequences, availability = _inputs()
+
+    output = model(sequences, availability)
+
+    assert output.direction_logits.shape == (6, 3)
+    assert output.path_quantiles.shape == (6, 5, 4, 3)
+    assert output.aggregate_quantiles.shape == (6, 4, 3)
+    assert model.parameter_count < 100_000

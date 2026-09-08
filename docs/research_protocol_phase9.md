@@ -60,9 +60,13 @@ de fused historische representation. Voorspelde candle 1 wordt dus niet teruggev
 als input voor candle 2. Daardoor ontstaat geen teacher-forcing mismatch en geen
 recursieve foutvermenigvuldiging in het primaire ontwerp.
 
-Een recursive one-stepmodel is uitsluitend een latere benchmarkbaseline. Het krijgt
-geen voorkeursstatus en mag de direct multi-step architectuur alleen vervangen als de
-vooraf vastgelegde vergelijking dat empirisch rechtvaardigt.
+Een recursive one-stepmodel is uitsluitend een benchmarkbaseline. Het krijgt geen
+voorkeursstatus en mag de direct multi-step architectuur alleen vervangen als de
+vooraf vastgelegde vergelijking dat empirisch rechtvaardigt. De baseline is
+free-running: de q50-representatie van de vorige voorspelde candle wordt teruggevoerd
+naar een GRUCell voor de volgende stap. Werkelijke future candles worden niet als
+decoder-input gebruikt, ook niet tijdens training; er is dus geen teacher-forcing
+mismatch.
 
 ## Probabilistische output
 

@@ -54,6 +54,49 @@ class OrderedQuantileHead(nn.Module):
         return result
 
 
+class RecursiveQuantilePathHead(nn.Module):
+    """Free-running one-step decoder used only as the recursive baseline."""
+
+    def __init__(
+        self,
+        fusion_size: int,
+        *,
+        steps: int = PATH_STEPS,
+        components: int = len(PATH_COMPONENTS),
+    ) -> None:
+        super().__init__()
+        self.steps = steps
+        self.components = components
+        self.initial_state = nn.Linear(fusion_size, fusion_size)
+        self.cell = nn.GRUCell(components, fusion_size)
+        self.step_head = OrderedQuantileHead(
+            fusion_size,
+            steps=1,
+            components=components,
+        )
+
+    def forward(self, fused: Tensor) -> Tensor:
+        hidden = torch.tanh(self.initial_state(fused))
+        previous_median = torch.zeros(
+            len(fused),
+            self.components,
+            dtype=fused.dtype,
+            device=fused.device,
+        )
+        outputs: list[Tensor] = []
+        for _ in range(self.steps):
+            hidden = self.cell(previous_median, hidden)
+            quantiles = self.step_head(hidden).squeeze(1)
+            outputs.append(quantiles)
+            previous_median = quantiles[..., 1]
+        result = torch.stack(outputs, dim=1)
+        if not torch.isfinite(result).all():
+            raise Phase9ModelError(
+                "recursive path head produced non-finite values"
+            )
+        return result
+
+
 @dataclass(frozen=True, slots=True)
 class Phase9Outputs:
     direction_logits: Tensor
@@ -157,10 +200,45 @@ class FuturePathGRU(nn.Module):
         )
 
 
+class RecursiveFuturePathGRU(FuturePathGRU):
+    """Free-running recursive one-step baseline with the same auxiliary heads."""
+
+    def __init__(
+        self,
+        timeframes: tuple[str, ...],
+        *,
+        input_size: int,
+        hidden_size: int,
+        fusion_size: int,
+        parameter_budget: int,
+    ) -> None:
+        super().__init__(
+            timeframes,
+            input_size=input_size,
+            hidden_size=hidden_size,
+            fusion_size=fusion_size,
+            parameter_budget=parameter_budget,
+        )
+        self.path_head = RecursiveQuantilePathHead(
+            fusion_size,
+        )
+        self.parameter_count = sum(
+            parameter.numel()
+            for parameter in self.parameters()
+        )
+        if self.parameter_count > parameter_budget:
+            raise Phase9ModelError(
+                f"recursive phase-9 parameter count {self.parameter_count} "
+                f"exceeds budget {parameter_budget}"
+            )
+
+
 __all__ = [
     "QUANTILES",
     "FuturePathGRU",
     "OrderedQuantileHead",
+    "RecursiveFuturePathGRU",
+    "RecursiveQuantilePathHead",
     "Phase9ModelError",
     "Phase9Outputs",
 ]
