@@ -73,11 +73,13 @@ class MultiTimeframeGRU(nn.Module):
                 f"neural parameter count {self.parameter_count} exceeds budget {parameter_budget}"
             )
 
-    def forward(
+    def encode(
         self,
         sequences: dict[str, Tensor],
         availability: Tensor,
-    ) -> NeuralOutputs:
+    ) -> tuple[Tensor, Tensor]:
+        """Return the fused representation and availability-aware weights."""
+
         if availability.ndim != 2 or availability.shape[1] != len(self.timeframes):
             raise Phase8ModelError("availability must have shape [batch, timeframes]")
         embeddings: list[Tensor] = []
@@ -100,6 +102,16 @@ class MultiTimeframeGRU(nn.Module):
         logits = logits.masked_fill(~mask, torch.finfo(logits.dtype).min)
         weights = torch.softmax(logits, dim=1)
         fused = self.fusion_norm((stacked * weights.unsqueeze(-1)).sum(dim=1))
+        if not torch.isfinite(fused).all() or not torch.isfinite(weights).all():
+            raise Phase8ModelError("fusion produced non-finite outputs")
+        return fused, weights
+
+    def forward(
+        self,
+        sequences: dict[str, Tensor],
+        availability: Tensor,
+    ) -> NeuralOutputs:
+        fused, weights = self.encode(sequences, availability)
         direction = self.direction_head(fused)
         normalized_return = self.return_head(fused).squeeze(-1)
         normalized_range = F.softplus(self.range_head(fused).squeeze(-1))
