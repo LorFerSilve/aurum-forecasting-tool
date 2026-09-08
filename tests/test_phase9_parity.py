@@ -8,7 +8,6 @@ import pytest
 
 from gold_forecasting.backtesting.v1 import DecisionPolicy
 from gold_forecasting.phase8.sequences import build_phase8_sequences
-from gold_forecasting.phase9.dataset import build_phase9_dataset
 from gold_forecasting.phase9.parity import (
     Phase9ParityError,
     evaluate_frozen_reference_on_phase9_universe,
