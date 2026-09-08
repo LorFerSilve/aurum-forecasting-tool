@@ -12,6 +12,9 @@ def test_phase9_defaults_freeze_five_three_minute_candles() -> None:
     config = Phase9Config()
 
     assert config.protocol_version == "phase9-v1"
+    assert config.test_years == (2022, 2023, 2024)
+    assert len(config.seeds) == 2
+    assert config.benchmark_variants == ("direct", "recursive")
     assert config.path_timeframe == "3min"
     assert config.path_steps == 5
     assert config.path_minutes == 15
@@ -30,3 +33,10 @@ def test_phase9_config_loads_repository_yaml() -> None:
 
     assert config.path_steps == 5
     assert config.output_directory == "reports/phase9_runs"
+
+
+def test_phase9_rejects_changed_benchmark_variant_order() -> None:
+    with pytest.raises(ValidationError, match="direct first"):
+        Phase9Config(
+            benchmark_variants=("recursive", "direct"),
+        )

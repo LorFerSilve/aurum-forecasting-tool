@@ -20,6 +20,12 @@ class Phase9Config(BaseModel):
     schema_version: Literal[1] = 1
     protocol_version: Literal["phase9-v1"] = "phase9-v1"
     data_config: str = "phase5.yaml"
+    test_years: tuple[StrictInt, ...] = (2022, 2023, 2024)
+    seeds: tuple[StrictInt, ...] = (20260906, 20260907)
+    benchmark_variants: tuple[Literal["direct", "recursive"], ...] = (
+        "direct",
+        "recursive",
+    )
 
     path_timeframe: Literal["3min"] = "3min"
     path_steps: Literal[5] = 5
@@ -45,6 +51,7 @@ class Phase9Config(BaseModel):
     weight_decay: float = Field(default=1e-4, ge=0.0, le=0.1)
     gradient_clip_norm: float = Field(default=1.0, gt=0.0, le=10.0)
     class_weighting: Literal["none", "balanced"] = "none"
+    minimum_policy_trades: StrictInt = Field(default=20, ge=1, le=10_000)
 
     direction_loss_weight: float = Field(default=1.0, gt=0.0, le=10.0)
     return_loss_weight: float = Field(default=0.25, ge=0.0, le=10.0)
@@ -62,6 +69,16 @@ class Phase9Config(BaseModel):
 
     @model_validator(mode="after")
     def validate_scope(self) -> Self:
+        if self.test_years != (2022, 2023, 2024):
+            raise ValueError("phase-9 outer years must remain 2022, 2023, 2024")
+        if len(self.seeds) < 2 or len(set(self.seeds)) != len(self.seeds):
+            raise ValueError("phase-9 requires at least two unique research seeds")
+        if any(seed < 0 for seed in self.seeds):
+            raise ValueError("phase-9 seeds must be nonnegative")
+        if self.benchmark_variants != ("direct", "recursive"):
+            raise ValueError(
+                "phase9-v1 must benchmark direct first and recursive second"
+            )
         if self.path_steps * 3 != self.path_minutes:
             raise ValueError("phase-9 path must contain exactly five 3min candles")
         if self.quantiles != (0.10, 0.50, 0.90):

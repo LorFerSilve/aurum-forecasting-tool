@@ -1,6 +1,9 @@
 schema_version: 1
 protocol_version: phase9-v1
 data_config: phase5.yaml
+test_years: [2022, 2023, 2024]
+seeds: [20260906, 20260907]
+benchmark_variants: [direct, recursive]
 
 path_timeframe: 3min
 path_steps: 5
@@ -27,6 +30,7 @@ learning_rate: 0.001
 weight_decay: 0.0001
 gradient_clip_norm: 1.0
 class_weighting: none
+minimum_policy_trades: 20
 
 direction_loss_weight: 1.0
 return_loss_weight: 0.25
