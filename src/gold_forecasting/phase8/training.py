@@ -19,6 +19,7 @@ import torch
 from numpy.typing import NDArray
 from sklearn.metrics import f1_score  # type: ignore[import-untyped]
 from torch import Tensor
+from torch.amp.grad_scaler import GradScaler
 from torch.nn import functional as F
 
 from gold_forecasting.classification import validate_probability_matrix
@@ -362,7 +363,7 @@ def train_neural_model(
     if weights is not None:
         weights = weights.to(device)
     use_amp = bool(config.mixed_precision and device.type == "cuda")
-    scaler = torch.amp.GradScaler("cuda", enabled=use_amp)
+    scaler = GradScaler("cuda", enabled=use_amp)
     max_epochs = forced_epochs if forced_epochs is not None else config.max_epochs
     if forced_epochs is not None and not 1 <= forced_epochs <= config.max_epochs:
         raise Phase8TrainingError(

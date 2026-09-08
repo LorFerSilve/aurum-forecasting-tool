@@ -7,8 +7,8 @@ from gold_forecasting.phase9.normalization import (
     fit_path_target_normalizer,
     path_target_array,
 )
-from tests.test_phase9_targets import _candles, _predictions
 from gold_forecasting.phase9.targets import build_future_path_targets
+from tests.test_phase9_targets import _candles, _predictions
 
 
 def test_path_normalizer_uses_only_explicit_training_rows() -> None:

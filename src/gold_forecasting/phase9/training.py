@@ -17,6 +17,7 @@ import torch
 from numpy.typing import NDArray
 from sklearn.metrics import f1_score  # type: ignore[import-untyped]
 from torch import Tensor, nn
+from torch.amp.grad_scaler import GradScaler
 from torch.nn import functional as F
 
 from gold_forecasting.classification import validate_probability_matrix
@@ -338,7 +339,7 @@ def train_phase9_model(
         config.mixed_precision
         and device.type == "cuda"
     )
-    scaler = torch.amp.GradScaler(
+    scaler = GradScaler(
         "cuda",
         enabled=use_amp,
     )
