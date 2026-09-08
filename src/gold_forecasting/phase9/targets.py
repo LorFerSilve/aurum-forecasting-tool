@@ -233,7 +233,10 @@ def build_future_path_targets(
     labels = joined.iloc[rows][
         ["instrument", "source", "prediction_time_utc", "path_anchor_close"]
     ].copy()
-    labels["path_end_time_utc"] = path_end.iloc[rows].to_numpy()
+    labels["path_end_time_utc"] = pd.DatetimeIndex(
+        path_end.iloc[rows],
+        dtype="datetime64[ns, UTC]",
+    )
 
     if len(rows):
         selected = safe[rows]
@@ -257,12 +260,14 @@ def build_future_path_targets(
                 low,
                 close,
             )
-            labels[f"path_step_{step + 1}_open_time_utc"] = frame[
-                "timestamp_open_utc"
-            ].to_numpy()
-            labels[f"path_step_{step + 1}_close_time_utc"] = frame[
-                "timestamp_close_utc"
-            ].to_numpy()
+            labels[f"path_step_{step + 1}_open_time_utc"] = pd.DatetimeIndex(
+                frame["timestamp_open_utc"],
+                dtype="datetime64[ns, UTC]",
+            )
+            labels[f"path_step_{step + 1}_close_time_utc"] = pd.DatetimeIndex(
+                frame["timestamp_close_utc"],
+                dtype="datetime64[ns, UTC]",
+            )
             for component_index, component in enumerate(OHLC_COMPONENTS):
                 labels[f"path_step_{step + 1}_bid_{component}"] = path_ohlc[
                     :, step, component_index

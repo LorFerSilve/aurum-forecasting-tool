@@ -83,6 +83,19 @@ def test_future_path_uses_exact_next_five_closed_three_minute_candles() -> None:
     assert result.output_row_count == 3
     assert result.dropped_missing_path == 0
     labels = result.labels
+    assert isinstance(labels["path_end_time_utc"].dtype, pd.DatetimeTZDtype)
+    assert str(labels["path_end_time_utc"].dt.tz) == "UTC"
+    for step in range(1, 6):
+        assert isinstance(
+            labels[f"path_step_{step}_open_time_utc"].dtype,
+            pd.DatetimeTZDtype,
+        )
+        assert isinstance(
+            labels[f"path_step_{step}_close_time_utc"].dtype,
+            pd.DatetimeTZDtype,
+        )
+        assert str(labels[f"path_step_{step}_open_time_utc"].dt.tz) == "UTC"
+        assert str(labels[f"path_step_{step}_close_time_utc"].dt.tz) == "UTC"
     first = labels.iloc[0]
     assert first["path_step_1_open_time_utc"] == candles.loc[
         11, "timestamp_open_utc"
