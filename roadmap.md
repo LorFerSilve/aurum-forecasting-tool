@@ -982,36 +982,36 @@ Een recursieve one-stepvariant mag als baseline worden gebouwd, maar niet automa
 
 ### Targetrepresentatie
 
-- [ ] Voorspel per stap gap ten opzichte van vorige close.
-- [ ] Voorspel body.
-- [ ] Voorspel upper wick als niet-negatieve waarde.
-- [ ] Voorspel lower wick als niet-negatieve waarde.
-- [ ] Reconstrueer geldige OHLC-candles.
-- [ ] Voeg quantielen of een passende kansverdeling toe.
-- [ ] Bewaar de echte vijf-candle-path als label.
-- [ ] Voeg rechtstreeks een 15min return/candle-head toe.
+- [x] Voorspel per stap gap ten opzichte van vorige close.
+- [x] Voorspel body.
+- [x] Voorspel upper wick als niet-negatieve waarde.
+- [x] Voorspel lower wick als niet-negatieve waarde.
+- [x] Reconstrueer geldige OHLC-candles.
+- [x] Voeg quantielen of een passende kansverdeling toe.
+- [x] Bewaar de echte vijf-candle-path als label.
+- [x] Voeg rechtstreeks een 15min return/candle-head toe.
 
 ### Losses
 
-- [ ] Path loss per stap.
-- [ ] Cumulatieve return loss.
-- [ ] Direction loss.
-- [ ] Range/volatility loss.
-- [ ] Temporal consistency loss tussen vijf 3min-candles en de directe 15min-head.
-- [ ] Huber of robuuste alternatieven voor uitbijters.
-- [ ] Genormaliseerde lossgewichten en gradient clipping.
+- [x] Path loss per stap.
+- [x] Cumulatieve return loss.
+- [x] Direction loss.
+- [x] Range/volatility loss.
+- [x] Temporal consistency loss tussen vijf 3min-candles en de directe 15min-head.
+- [x] Huber of robuuste alternatieven voor uitbijters.
+- [x] Genormaliseerde lossgewichten en gradient clipping.
 
 Meer fouten produceren dus meer leersignaal, maar we maken backpropagation niet “strenger” door onbeperkt grote updates toe te laten. Sneller leren moet voortkomen uit rijkere, goed geschaalde supervision en meerdere samenhangende targets, niet uit instabiele gradients.
 
 ### Evaluatie
 
-- [ ] Fout per voorspelde stap.
-- [ ] Cumulatieve 15min returnfout.
+- [x] Fout per voorspelde stap.
+- [x] Cumulatieve 15min returnfout.
 - [ ] Direction accuracy van het geaggregeerde pad.
 - [ ] High/low/range coverage.
-- [ ] Quantile coverage en intervalbreedte.
+- [x] Quantile coverage en intervalbreedte.
 - [ ] Consistency tussen het pad en de directe 15min-head.
-- [ ] Vergelijk direct multi-step met recursief one-step.
+- [x] Vergelijk direct multi-step met recursief one-step.
 - [ ] Meet of de path-head de uiteindelijke direction, calibration of nettoresultaten verbetert.
 
 ### Promotiebesluit

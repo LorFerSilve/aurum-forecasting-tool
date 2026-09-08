@@ -32,17 +32,29 @@
 - path-evaluatie voor q50-MAE, q10-q90 coverage, intervalbreedte,
   reconstructed-OHLC-fout en cumulatieve 15min-returnfout;
 - expliciete UTC-dtypes voor alle future-path timestamps;
+- frozen 2022/2023/2024 nested walk-forward orchestration met hetzelfde 181-minuten-gap;
+- direct-vs-recursive vergelijking op exact dezelfde outer rows;
+- atomaire fold-artifacts voor predictions, pathquantielen, backtests, histories en checkpoints;
+- run-level config/schedule/runtime/dependency/reference snapshots;
+- completion manifest met SHA-256 voor alle persisted evidence;
+- `phase9 validate` met protocol-, holdout-, outer-year-, gap- en digestguards;
+- synthetische end-to-end dry run via `phase9 dry-run`;
+- frozen-reference common-sample subset zonder refit of policy-reselectie;
+- future-mutation guard: future labels veranderen, historische sequences niet;
 - unit tests voor targettiming, gaps, holdout, reconstructie, quantielen, losses,
-  train-only scaling, common universe, training, reproduceerbaarheid en budget.
+  train-only scaling, common universe, training, reproduceerbaarheid, orchestration,
+  artifacts, dry-run, referencepariteit en budget.
 
 ## Bewust nog niet geopend
 
 Er is nog geen formele `phase9 run` CLI en geen empirische promotion decision. Eerst moet
 de canonieke phase-8 benchmark volledig gevalideerd en als expliciete reference vastgezet
-worden. De train/predict- en evaluatiebouwstenen bestaan al, maar worden nog niet als
-formele benchmark geëxposeerd. Daarna worden de outer walk-forward orchestration,
-exacte Phase-8/Phase-7 common-sample comparison, recursive one-step baseline en de
-formele run/validate-flow toegevoegd.
+worden. De train/predict-, recursive baseline-, walk-forward-, artifact-, validator- en
+common-sample bouwstenen bestaan al. De synthetic dry run oefent de volledige keten.
+Nog open voor de formele benchmark zijn: de canonieke Phase-8 run-ID pinnen, de echte
+Phase-8/Phase-7 outer predictions op de Phase-9 common universe inladen, alle drie
+development-folds op echte gouddata uitvoeren, de vooraf vastgelegde promotion gates
+toepassen en pas daarna een formeel `phase9 run`-commando openen.
 
 De lokale `codex/phase9-path-research` branch van een andere agent bestaat momenteel
 niet op GitHub. De bijbehorende stash blijft daarom apart bewaard en wordt na de lopende

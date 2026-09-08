@@ -112,11 +112,22 @@ en probabilities blijven ongekalibreerd. Zie het
 
 ### Fase 9 — direct future-candle path (in ontwikkeling)
 
-Op `feature/phase-9-future-path` wordt de volgende challenger voorbereid: vijf
-toekomstige 3min-candles in één forward pass, met geordende 10/50/90%-quantielen en
-een afzonderlijke directe 15min-candle-head. De path-reconstructie garandeert geldige
-OHLC-candles. Er is bewust nog geen formele Phase-9 benchmark-CLI zolang de canonieke
-Phase-8 reference niet is vastgesteld. Zie
+Op `feature/phase-9-future-path` staat inmiddels de structurele Phase-9 keten:
+vijf toekomstige 3min-candles, geordende 10/50/90%-quantielen, geldige OHLC-
+reconstructie, een directe 15min-head en een free-running recursive one-step baseline.
+Dezelfde 2022/2023/2024 nested walk-forwardstructuur en het 181-minuten-gapcontract zijn
+voorbereid. Train-only pathscaling, common-sample referencepariteit, atomaire
+checkpoints/artifacts en een cryptografische validator zijn aanwezig.
+
+De volledige integratie kan zonder echte marktbenchmark worden getest met:
+
+```powershell
+.\.venv\Scripts\gold-forecast.exe phase9 dry-run --output reports/phase9_dry_run
+.\.venv\Scripts\gold-forecast.exe phase9 validate reports/phase9_dry_run
+```
+
+Er is bewust nog **geen** formeel `phase9 run`-commando. Eerst moet de canonieke
+Phase-8 run worden vastgesteld en als frozen reference worden gepind. Zie
 [het fase-9-protocol](docs/research_protocol_phase9.md) en de
 [implementatiestatus](docs/phase9_implementation.md).
 
