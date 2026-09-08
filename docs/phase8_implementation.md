@@ -74,3 +74,14 @@ Phase-8 formal runs use public package version `torch==2.11.0`. CI may use the
 CPU wheel. NVIDIA development runs use the matching official CUDA 12.8 wheel
 `torch==2.11.0+cu128`; the local `+cu128` build tag is accepted by the dependency
 guard because the frozen public version remains 2.11.0.
+
+
+## PyTorch wheel split
+
+The public neural runtime version is frozen separately in
+`requirements-neural.lock` as `torch==2.11.0`. The general
+`requirements.lock` deliberately does not install PyTorch itself because the
+correct wheel source is platform-specific. GitHub CI installs the official CPU
+wheel; NVIDIA Windows research runs use the matching official
+`2.11.0+cu128` wheel. Formal runtime validation compares the public version
+and permits the CUDA local build tag.

@@ -1,0 +1,9 @@
+# Phase-8/9 neural runtime public-version pin.
+#
+# Do not use this file alone to choose a wheel source:
+# - GitHub CI installs torch==2.11.0 from the official PyTorch CPU index.
+# - NVIDIA Windows research runs install torch==2.11.0+cu128 from the
+#   official PyTorch CUDA 12.8 index.
+#
+# The public package version must remain identical.
+torch==2.11.0
