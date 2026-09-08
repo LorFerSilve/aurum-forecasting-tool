@@ -8,7 +8,7 @@ import torch
 from torch import Tensor, nn
 from torch.nn import functional as F
 
-from gold_forecasting.phase8.model import MultiTimeframeGRU
+from gold_forecasting.phase8.model import MultiTimeframeGRU, Phase8ModelError
 from gold_forecasting.phase9.targets import PATH_COMPONENTS, PATH_STEPS
 
 QUANTILES = (0.10, 0.50, 0.90)
@@ -78,13 +78,18 @@ class FuturePathGRU(nn.Module):
         parameter_budget: int,
     ) -> None:
         super().__init__()
-        self.core = MultiTimeframeGRU(
-            timeframes,
-            input_size=input_size,
-            hidden_size=hidden_size,
-            fusion_size=fusion_size,
-            parameter_budget=parameter_budget,
-        )
+        try:
+            self.core = MultiTimeframeGRU(
+                timeframes,
+                input_size=input_size,
+                hidden_size=hidden_size,
+                fusion_size=fusion_size,
+                parameter_budget=parameter_budget,
+            )
+        except Phase8ModelError as exc:
+            raise Phase9ModelError(
+                f"phase-9 core violates model contract: {exc}"
+            ) from exc
         self.path_head = OrderedQuantileHead(
             fusion_size,
             steps=PATH_STEPS,
