@@ -6,6 +6,7 @@ import hashlib
 import importlib.metadata
 import json
 import os
+import re
 from pathlib import Path
 from statistics import median
 from typing import Any
@@ -60,6 +61,14 @@ from gold_forecasting.phase8.training import (
 from gold_forecasting.registry import RunRegistry, get_git_code_version
 
 GAP_MINUTES = 181
+_RUNTIME_DEPENDENCIES = (
+    "numpy",
+    "pandas",
+    "scipy",
+    "scikit-learn",
+    "torch",
+    "pyarrow",
+)
 
 
 def _require_clean_code_version(code_version: str) -> None:
@@ -68,6 +77,62 @@ def _require_clean_code_version(code_version: str) -> None:
             "formal phase-8 runs require a clean committed Git working tree; "
             f"found {code_version!r}"
         )
+
+
+def _locked_runtime_versions(root: Path) -> dict[str, str]:
+    """Read the frozen versions for phase-8 runtime packages from requirements.lock."""
+
+    lock_path = root / "requirements.lock"
+    versions: dict[str, str] = {}
+    pattern = re.compile(r"^([A-Za-z0-9_.-]+)==([^\\s;]+)")
+    for raw_line in lock_path.read_text(encoding="utf-8").splitlines():
+        match = pattern.match(raw_line.strip())
+        if match is None:
+            continue
+        name = match.group(1).lower().replace("_", "-")
+        versions[name] = match.group(2)
+    missing = [
+        name
+        for name in _RUNTIME_DEPENDENCIES
+        if name not in versions
+    ]
+    if missing:
+        raise RuntimeError(
+            "requirements.lock is missing phase-8 runtime pins: "
+            + ", ".join(missing)
+        )
+    return {
+        name: versions[name]
+        for name in _RUNTIME_DEPENDENCIES
+    }
+
+
+def _validate_locked_runtime_dependencies(
+    root: Path,
+) -> dict[str, str]:
+    """Reject a formal benchmark before training when the venv differs from the lock."""
+
+    expected = _locked_runtime_versions(root)
+    actual = {
+        name: importlib.metadata.version(name)
+        for name in _RUNTIME_DEPENDENCIES
+    }
+    mismatches: list[str] = []
+    for name in _RUNTIME_DEPENDENCIES:
+        expected_version = expected[name]
+        actual_version = actual[name]
+        actual_public = actual_version.split("+", 1)[0]
+        if actual_public != expected_version:
+            mismatches.append(
+                f"{name}: installed {actual_version}, locked {expected_version}"
+            )
+    if mismatches:
+        raise RuntimeError(
+            "formal phase-8 runtime differs from requirements.lock; "
+            "reinstall the locked environment before benchmarking: "
+            + "; ".join(mismatches)
+        )
+    return actual
 
 
 def _rows(frame: pd.DataFrame) -> np.ndarray:
@@ -951,6 +1016,7 @@ def run_phase8(
     _require_clean_code_version(
         expected_code_version
     )
+    locked_runtime = _validate_locked_runtime_dependencies(root)
     if config.deterministic_algorithms:
         os.environ.setdefault(
             "CUBLAS_WORKSPACE_CONFIG",
@@ -1040,19 +1106,7 @@ def run_phase8(
                 ),
             },
         )
-        versions = {
-            name: importlib.metadata.version(
-                name
-            )
-            for name in (
-                "numpy",
-                "pandas",
-                "scipy",
-                "scikit-learn",
-                "torch",
-                "pyarrow",
-            )
-        }
+        versions = dict(locked_runtime)
         write_json_atomic(
             output / "dependencies.json",
             versions,

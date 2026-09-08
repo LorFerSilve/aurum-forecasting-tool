@@ -6,6 +6,8 @@ import numpy as np
 import pytest
 
 from gold_forecasting.phase8.pipeline import (
+    _locked_runtime_versions,
+    _validate_locked_runtime_dependencies,
     _validate_phase7_baseline_metrics,
 )
 
@@ -64,3 +66,69 @@ def test_phase7_baseline_metric_contract_rejects_missing_section() -> None:
             baseline,
             horizon=60,
         )
+
+
+def _write_runtime_lock(tmp_path) -> dict[str, str]:
+    expected = {
+        "numpy": "2.4.6",
+        "pandas": "2.3.3",
+        "scipy": "1.17.1",
+        "scikit-learn": "1.9.0",
+        "torch": "2.14.0",
+        "pyarrow": "23.0.1",
+    }
+    (tmp_path / "requirements.lock").write_text(
+        "\n".join(
+            f"{name}=={version}"
+            for name, version in expected.items()
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return expected
+
+
+def test_locked_runtime_versions_reads_required_pins(tmp_path) -> None:
+    expected = _write_runtime_lock(tmp_path)
+
+    assert _locked_runtime_versions(tmp_path) == expected
+
+
+def test_locked_runtime_dependencies_rejects_stale_venv(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    expected = _write_runtime_lock(tmp_path)
+
+    def installed(name: str) -> str:
+        if name == "torch":
+            return "2.10.0+cu128"
+        return expected[name]
+
+    monkeypatch.setattr(
+        "gold_forecasting.phase8.pipeline.importlib.metadata.version",
+        installed,
+    )
+
+    with pytest.raises(RuntimeError, match="torch: installed 2.10.0"):
+        _validate_locked_runtime_dependencies(tmp_path)
+
+
+def test_locked_runtime_dependencies_accepts_local_cuda_build_tag(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    expected = _write_runtime_lock(tmp_path)
+
+    def installed(name: str) -> str:
+        if name == "torch":
+            return "2.14.0+cu128"
+        return expected[name]
+
+    monkeypatch.setattr(
+        "gold_forecasting.phase8.pipeline.importlib.metadata.version",
+        installed,
+    )
+
+    actual = _validate_locked_runtime_dependencies(tmp_path)
+    assert actual["torch"] == "2.14.0+cu128"

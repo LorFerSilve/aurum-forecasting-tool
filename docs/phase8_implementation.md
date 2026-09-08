@@ -27,7 +27,7 @@
 - hergebruik van de bestaande policy- en base/stress-backtestlogica;
 - per-seed histories, checkpoints, fusion weights, training/inferencetijden en metrics;
 - `phase8 run` / `phase8 validate` CLI;
-- clean-Git en gesloten-holdoutguards.
+- clean-Git, dependency-lockpreflight en gesloten-holdoutguards.
 
 ## Bewuste v1-beperkingen
 
@@ -58,3 +58,11 @@ Daarna:
 
 Pas na inhoudelijke review van die run kunnen de empirische exitcriteria van fase 8 worden
 afgesloten. De finale 2025+ holdout blijft ook dan gesloten.
+
+
+## Reproduceerbaarheidsnotitie
+
+Formele Phase-8 runs weigeren voortaan vóór dataopbouw of training wanneer de
+geïnstalleerde kernpackages (`numpy`, `pandas`, `scipy`, `scikit-learn`, `torch`,
+`pyarrow`) niet overeenkomen met `requirements.lock`. CUDA-local buildtags zoals
+`+cu128` zijn toegestaan zolang de publieke PyTorch-versie gelijk is aan de lock.
