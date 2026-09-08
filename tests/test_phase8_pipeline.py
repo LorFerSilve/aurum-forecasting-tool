@@ -110,7 +110,7 @@ def test_locked_runtime_dependencies_rejects_stale_venv(
         installed,
     )
 
-    with pytest.raises(RuntimeError, match="torch: installed 2.10.0"):
+    with pytest.raises(RuntimeError, match=r"torch: installed 2\.10\.0"):
         _validate_locked_runtime_dependencies(tmp_path)
 
 
