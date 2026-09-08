@@ -978,6 +978,12 @@ def run_phase9(
             for variant in config.benchmark_variants
         }
 
+        aggregate_summary: dict[str, Any] = dict(
+            variant_aggregates
+        )
+        aggregate_summary["phase7_frozen"] = phase7_aggregate
+        aggregate_summary["phase8_frozen"] = phase8_aggregate
+
         summary = {
             "protocol": "phase9-v1",
             "run_mode": "formal_benchmark",
@@ -990,11 +996,7 @@ def run_phase9(
             "phase8_reference_run": prepared.references.phase8.run_id,
             "dataset": prepared.dataset.diagnostics,
             "folds": fold_summary,
-            "aggregate": {
-                **variant_aggregates,
-                "phase7_frozen": phase7_aggregate,
-                "phase8_frozen": phase8_aggregate,
-            },
+            "aggregate": aggregate_summary,
             "comparisons": comparisons,
             "promotion_review": {
                 "state": "pending_post_benchmark_review",
