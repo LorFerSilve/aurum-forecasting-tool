@@ -65,3 +65,14 @@ technische blokkade voor het formele `phase9 run`-commando opheffen.
 
 PR #3 blijft tot na de canonical benchmark draft. De finale 2025+ holdout blijft
 gesloten en Phase 8 blijft methodologisch frozen.
+
+## Monte Carlo-roadmapbesluit
+
+Het document `docs/monte_carlo_integration_proposal.md` is op 2026-09-08 formeel
+geaccepteerd en in de hoofdroadmap verwerkt. Dit **wijzigt de bevroren Phase-9 benchmark
+niet**: de huidige q10/q50/q90 future-path outputs vormen de distributionele precursor.
+
+Nieuwe uncertainty-contracts en calibratie worden in Phase 11 gebouwd; predictive
+Monte Carlo wordt in Phase 12 als decision-policy challenger geëvalueerd; strategy
+Monte Carlo/block bootstrap wordt in Phase 13 gebruikt voor robuustheids- en
+stresstesting vóór de finale holdout.
