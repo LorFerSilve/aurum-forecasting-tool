@@ -168,3 +168,18 @@ Geen phase-9-uitkomst activeert paper of live trading.
 - temporal-consistency loss is differentiable;
 - finale holdout blijft ontoegankelijk;
 - formele benchmark start alleen op clean Git en locked dependencies.
+
+
+## Common-sample referencepariteit
+
+Phase 9 kan samples verliezen wanneer één van de vijf vereiste toekomstige
+3min-candles ontbreekt. Daarom mogen Phase-7/Phase-8 metrics niet rechtstreeks uit
+hun oorspronkelijke, grotere outer testset worden overgenomen. Frozen reference
+predictions worden zonder refit en zonder policy-reselectie gesubset op exact de
+Phase-9 sample-ID's, in Phase-9 volgorde. Prediction timestamps, direction targets,
+return targets en sample digest moeten exact overeenkomen; iedere mismatch faalt
+gesloten.
+
+Een future-mutation guard controleert bovendien dat het wijzigen van candles ná
+prediction time de historische sequence tensors niet verandert, terwijl het
+future-path label wel verandert. Daarmee blijft future informatie uitsluitend target.
