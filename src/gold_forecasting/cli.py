@@ -67,6 +67,30 @@ def validate_phase9_research(
     typer.echo(json.dumps(verify_phase9(run_directory), indent=2))
 
 
+@phase9_app.command("preflight")
+def preflight_phase9_research(
+    config: ConfigOption = Path("configs/phase9.yaml"),
+    report: Annotated[
+        Path,
+        typer.Option(
+            help="JSON evidence report under reports/; no formal benchmark is started."
+        ),
+    ] = Path("reports/phase9_preflight.json"),
+) -> None:
+    """Run guarded real-data checks without opening the formal Phase-9 benchmark."""
+
+    from gold_forecasting.phase9.preflight import run_phase9_preflight
+
+    result = run_phase9_preflight(
+        config,
+        report_path=report,
+    )
+    typer.echo(
+        f"Phase 9 preflight {result['status']}: "
+        f"rows={result['dataset']['common_eligible']}, report={report}"
+    )
+
+
 @phase8_app.command("run")
 def run_phase8_research(config: ConfigOption = Path("configs/phase8.yaml")) -> None:
     """Run the compact neural challenger against the frozen phase-7 reference."""

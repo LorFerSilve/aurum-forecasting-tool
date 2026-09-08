@@ -10,6 +10,14 @@ Fase 9 onderzoekt of rijkere supervision uit het volledige pad van de volgende v
 bovenop de compacte neural core uit fase 8. Het vervangt de bevroren klassieke
 phase-7 fallback niet automatisch.
 
+De klassieke Phase-7 fallback wordt eveneens cryptografisch gepind:
+
+- run: `20260907T014255645674Z-b2afe281`;
+- benchmarkcode: `3f0a703568224fe9169b1e9f8d61dad131f0005b`;
+- completion manifest:
+  `sha256:beac58092d06350bb067fbd2df144bb9cb2507f45953c19487474c87d0ceca0f`;
+- 15min research champion: `mvp/logistic`.
+
 De canonieke Phase-8 run is inmiddels formeel vastgesteld en vóór enig Phase-9
 marktresultaat in de benchmarkconfig vastgezet:
 
@@ -20,8 +28,9 @@ marktresultaat in de benchmarkconfig vastgezet:
 - uitkomst: 0/8 neural predictive admissions en 0/8 economic promotions;
 - actieve fallback: de frozen Phase-7 champions.
 
-De implementatiebranch exposeert nog geen formeel `phase9 run`-commando totdat de
-frozen Phase-8/Phase-7 prediction loader en volledige real-data preflight zijn aangesloten.
+De implementatiebranch exposeert nog geen formeel `phase9 run`-commando. De frozen
+Phase-7/Phase-8 prediction loader en `phase9 preflight` zijn technisch aangesloten,
+maar de canonical real-data preflight moet eerst lokaal volledig slagen.
 
 De finale holdout vanaf 2025-01-01 UTC blijft gesloten.
 
@@ -176,7 +185,11 @@ Geen phase-9-uitkomst activeert paper of live trading.
 - parameterbudget faalt gesloten;
 - temporal-consistency loss is differentiable;
 - finale holdout blijft ontoegankelijk;
-- formele benchmark start alleen op clean Git en locked dependencies.
+- formele benchmark start alleen op clean Git en locked dependencies;
+- canonical Phase-7/Phase-8 completion manifests en vereiste artifacts zijn intact;
+- actuele curated 1min/3min/15min data matcht de frozen Phase-8 source manifests;
+- frozen 15min predictions en policies pareren exact op iedere Phase-9 outer universe;
+- direct en recursive passeren elk een korte real-data forward/backward/checkpoint-smoke.
 
 
 ## Common-sample referencepariteit

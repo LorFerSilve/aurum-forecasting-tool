@@ -40,6 +40,12 @@
 - `phase9 validate` met protocol-, holdout-, outer-year-, gap- en digestguards;
 - synthetische end-to-end dry run via `phase9 dry-run`;
 - frozen-reference common-sample subset zonder refit of policy-reselectie;
+- cryptografisch geverifieerde loader voor de canonieke Phase-7/Phase-8 runs;
+- expliciete Phase-7 én Phase-8 run/code/completion-pins in `phase9-v1`;
+- fail-closed loading van uitsluitend manifest-authenticated 15min outer predictions;
+- behoud van de reeds geselecteerde frozen reference-policies;
+- real-data `phase9 preflight` voor data-identiteit, folds, referencepariteit,
+  direct/recursive smokefits, quantile-invarianten en checkpoint-integriteit;
 - future-mutation guard: future labels veranderen, historische sequences niet;
 - unit tests voor targettiming, gaps, holdout, reconstructie, quantielen, losses,
   train-only scaling, common universe, training, reproduceerbaarheid, orchestration,
@@ -52,11 +58,10 @@ De canonieke Phase-8 reference is nu frozen in config/protocol. De train/predict
 recursive baseline-, walk-forward-, artifact-, validator- en common-sample bouwstenen
 bestaan al en de synthetic dry run oefent de volledige keten.
 
-Nog open vóór de formele marktbenchmark zijn: de echte frozen Phase-8/Phase-7 outer
-predictions veilig laden en cryptografisch verifiëren, die references exact op de
-Phase-9 common universe evalueren, de volledige real-data preflight uitvoeren en pas
-daarna het formele `phase9 run`-commando openen.
+De frozen-reference loader en de volledige preflightcode zijn nu aangesloten, maar de
+canonieke real-data preflight moet nog lokaal worden uitgevoerd tegen de grote Phase-7-
+en Phase-8-runmappen. Alleen een volledig geslaagde `phase9 preflight` mag de laatste
+technische blokkade voor het formele `phase9 run`-commando opheffen.
 
-De lokale `codex/phase9-path-research` stash van een eerdere agent blijft afzonderlijk
-bewaard. Ze wordt pas op deze inmiddels canonieke Phase-8/Phase-9 basis gereviewd voordat
-eventuele onderdelen bewust worden overgenomen.
+PR #3 blijft tot na de canonical benchmark draft. De finale 2025+ holdout blijft
+gesloten en Phase 8 blijft methodologisch frozen.
