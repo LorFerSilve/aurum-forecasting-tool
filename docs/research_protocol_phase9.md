@@ -1,7 +1,7 @@
 # Researchprotocol — fase 9, directe vijf-candle future path
 
 **Protocol:** `phase9-v1`  
-**Status:** structureel bevroren vóór de eerste formele phase-9 benchmark
+**Status:** structureel bevroren; canonieke Phase-8 reference vastgezet vóór de eerste formele Phase-9 benchmark
 
 ## Doel en afhankelijkheid
 
@@ -10,9 +10,18 @@ Fase 9 onderzoekt of rijkere supervision uit het volledige pad van de volgende v
 bovenop de compacte neural core uit fase 8. Het vervangt de bevroren klassieke
 phase-7 fallback niet automatisch.
 
-Een formele phase-9 benchmark mag pas starten nadat de canonieke phase-8 run is
-vastgesteld en als expliciete reference in de phase-9 benchmarkconfig is vastgezet.
-Deze implementatiebranch exposeert daarom nog geen formeel `phase9 run`-commando.
+De canonieke Phase-8 run is inmiddels formeel vastgesteld en vóór enig Phase-9
+marktresultaat in de benchmarkconfig vastgezet:
+
+- run: `20260908T020044407464Z-24f4c0d4`;
+- benchmarkcode: `75945fe70606c8200cebc66678d0e220db5fb0ad`;
+- completion manifest:
+  `sha256:9bce4a80c7e0d65fc40ccd4e1fea3c1ef2d56022f8b60720f3d1a8b54cfbb922`;
+- uitkomst: 0/8 neural predictive admissions en 0/8 economic promotions;
+- actieve fallback: de frozen Phase-7 champions.
+
+De implementatiebranch exposeert nog geen formeel `phase9 run`-commando totdat de
+frozen Phase-8/Phase-7 prediction loader en volledige real-data preflight zijn aangesloten.
 
 De finale holdout vanaf 2025-01-01 UTC blijft gesloten.
 

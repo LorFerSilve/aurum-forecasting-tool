@@ -2,7 +2,7 @@
 
 **Protocol:** `phase9-v1`  
 **Branch:** `feature/phase-9-future-path`  
-**Empirische status:** nog geen formele benchmark; canonieke phase-8 reference wordt afgewacht
+**Empirische status:** nog geen formele Phase-9 benchmark; canonieke Phase-8 reference is frozen
 
 ## Reeds geïmplementeerd
 
@@ -47,15 +47,16 @@
 
 ## Bewust nog niet geopend
 
-Er is nog geen formele `phase9 run` CLI en geen empirische promotion decision. Eerst moet
-de canonieke phase-8 benchmark volledig gevalideerd en als expliciete reference vastgezet
-worden. De train/predict-, recursive baseline-, walk-forward-, artifact-, validator- en
-common-sample bouwstenen bestaan al. De synthetic dry run oefent de volledige keten.
-Nog open voor de formele benchmark zijn: de canonieke Phase-8 run-ID pinnen, de echte
-Phase-8/Phase-7 outer predictions op de Phase-9 common universe inladen, alle drie
-development-folds op echte gouddata uitvoeren, de vooraf vastgelegde promotion gates
-toepassen en pas daarna een formeel `phase9 run`-commando openen.
+Er is nog geen formele `phase9 run` CLI en geen empirische Phase-9 promotion decision.
+De canonieke Phase-8 reference is nu frozen in config/protocol. De train/predict-,
+recursive baseline-, walk-forward-, artifact-, validator- en common-sample bouwstenen
+bestaan al en de synthetic dry run oefent de volledige keten.
 
-De lokale `codex/phase9-path-research` branch van een andere agent bestaat momenteel
-niet op GitHub. De bijbehorende stash blijft daarom apart bewaard en wordt na de lopende
-phase-8 run tegen deze remote branch gereviewd voordat iets ervan wordt overgenomen.
+Nog open vóór de formele marktbenchmark zijn: de echte frozen Phase-8/Phase-7 outer
+predictions veilig laden en cryptografisch verifiëren, die references exact op de
+Phase-9 common universe evalueren, de volledige real-data preflight uitvoeren en pas
+daarna het formele `phase9 run`-commando openen.
+
+De lokale `codex/phase9-path-research` stash van een eerdere agent blijft afzonderlijk
+bewaard. Ze wordt pas op deze inmiddels canonieke Phase-8/Phase-9 basis gereviewd voordat
+eventuele onderdelen bewust worden overgenomen.

@@ -906,61 +906,69 @@ paper- of live-tradingchampion. Zie
 
 ## Fase 8 — Compact multi-timeframe neuraal kernmodel
 
-**Inspanning:** L  
-**Release:** onderdeel van `v0.3`  
+**Status:** ✅ technisch en empirisch afgerond  
+**Canonieke run:** `20260908T020044407464Z-24f4c0d4`  
+**Release:** blijft onderdeel van post-`v0.2.0`; geen neural promotion  
 **Afhankelijkheden:** fase 7
 
 ### Doel
 
-Een compact neuraal netwerk toevoegen dat tijdsreekspatronen en interacties tussen timeframes kan leren, zonder de betrouwbare klassieke modellen te vervangen voordat het zijn nut bewijst.
+Een compact neuraal netwerk toevoegen dat tijdsreekspatronen en interacties tussen
+timeframes kan leren, zonder de betrouwbare klassieke modellen te vervangen voordat
+het zijn nut bewijst.
 
 ### Architectuur
 
-- [ ] Maak een afzonderlijke sequence encoder per geselecteerd timeframe.
-- [ ] Start met een compacte TCN of GRU; vergelijk pas later met een kleine Transformer.
-- [ ] Fuseer timeframe-embeddings met een eenvoudige gated/attention-fusionlaag.
-- [ ] Voeg direction heads per horizon toe.
-- [ ] Voeg directe return- of quantile-heads toe.
-- [ ] Voeg volatility/range-heads toe als hulpdoelen.
-- [ ] Laat horizonheads alleen relevante featuregroepen ontvangen.
-- [ ] Houd modelgrootte en parameterbudget expliciet begrensd.
+- [x] Afzonderlijke single-layer GRU encoder per geselecteerd timeframe.
+- [x] Availability-aware gated fusion.
+- [x] Direction head per horizonfit.
+- [x] Directe return-head.
+- [x] Range- en realized-volatility-heads als hulpdoelen.
+- [x] Horizon-specifieke timeframegroepen: 3–15m en 30–180m.
+- [x] Hard parameterbudget; werkelijk 15.241 parameters versus maximaal 150.000.
 
 ### Training
 
-- [ ] Gebruik mini-batches die tijdsvolgorde binnen ieder sample behouden.
-- [ ] Gebruik train-only normalisatie.
-- [ ] Gebruik class-balanced of focal loss alleen na vergelijking.
-- [ ] Gebruik Huber/quantile loss voor continue targets.
-- [ ] Normaliseer losscomponenten voordat gewichten worden gecombineerd.
-- [ ] Gebruik early stopping op een vooraf gekozen validationmetric.
-- [ ] Voeg gradient clipping en NaN-controles toe.
-- [ ] Gebruik mixed precision wanneer hardware dit ondersteunt.
-- [ ] Registreer config, seed, datahash, curves en checkpoint.
-- [ ] Test meerdere seeds voor de beste configuratie.
-
-### Curriculum
-
-1. één 15min direction head;
-2. direction plus continue 15min return;
-3. meerdere directe horizons;
-4. volatility/range als hulpdoel;
-5. pas in fase 9 de volledige candle-path.
+- [x] Mini-batches behouden timestepvolgorde binnen ieder sample.
+- [x] Train-only imputatie, sequence-normalisatie en targetscaling.
+- [x] Gewone cross-entropy als frozen v1-baseline; focal/class weighting niet toegevoegd zonder bewijs.
+- [x] Huber losses voor continue targets.
+- [x] Genormaliseerde hulpdoelen vóór combinatie van losscomponenten.
+- [x] Inner-fold early stopping op macro-F1.
+- [x] Gradient clipping, NaN/non-finite guards en AMP-overflowherstel.
+- [x] CUDA mixed precision met deterministic algorithms.
+- [x] Config, seeds, datahashes, histories, fusion weights en checkpoints opgeslagen.
+- [x] Twee vooraf bevroren seeds per outer fold.
 
 ### Verificatie
 
-- [ ] Overfit bewust een zeer kleine dataset als implementatiesmoketest.
-- [ ] Controleer tensorvormen voor ieder timeframe.
-- [ ] Controleer gradientnormen.
-- [ ] Herhaal dezelfde run met dezelfde seed.
-- [ ] Vergelijk exact met logistische regressie en XGBoost.
-- [ ] Meet training- en inferencetijd.
+- [x] Intentional-overfit smoketest op kleine synthetische data.
+- [x] Tensorvormen en availability masks invariant-tested.
+- [x] Gradientnormen en AMP-skips geaudit.
+- [x] Same-seed CPU-reproduceerbaarheid getest.
+- [x] Exacte outer sample-digestpariteit met frozen Phase-7 champions.
+- [x] Training- en inferencetijd geregistreerd.
+- [x] Volledige `phase8 validate` artifactintegriteit geslaagd: 607 bestanden.
+- [x] Finale 2025+ holdout gesloten.
+
+### Empirische uitkomst
+
+- 0/8 horizons passeren predictive admission.
+- 0/8 horizons passeren economic promotion.
+- Neural Brier/log loss zijn beter, maar macro-F1 is op alle horizons slechter.
+- Alle geselecteerde policies zijn cash/no-trade.
+- De Phase-7 champions blijven actief.
+- De neural core gaat uitsluitend als researchvariant mee naar fase 9.
 
 ### Exitcriteria
 
-- Het model traint stabiel en reproduceerbaar.
-- Alle heads produceren structureel geldige outputs.
-- Het neural model wordt alleen champion als de verbetering de promotiepoort haalt.
-- Anders blijft de price-only XGBoost/logistische champion actief en gaat het netwerk als onderzoeksvariant mee naar fase 9.
+- [x] Het model traint stabiel en reproduceerbaar.
+- [x] Alle heads produceren structureel geldige outputs.
+- [x] Geen complexere champion gepromoveerd zonder bewijs.
+- [x] Negatieve neural uitkomst formeel vastgelegd.
+- [x] Phase 9 mag verderbouwen op de neural representation als onderzoeksvariant.
+
+Zie [het formele Phase-8 verificatierapport](docs/phase8_verification.md).
 
 ---
 
@@ -968,7 +976,7 @@ Een compact neuraal netwerk toevoegen dat tijdsreekspatronen en interacties tuss
 
 **Inspanning:** L  
 **Release:** onderdeel van `v0.3`  
-**Afhankelijkheden:** fase 8
+**Afhankelijkheden:** fase 8 ✅ — canonieke reference `20260908T020044407464Z-24f4c0d4`
 
 ### Doel
 

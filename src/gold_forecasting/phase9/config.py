@@ -20,6 +20,17 @@ class Phase9Config(BaseModel):
     schema_version: Literal[1] = 1
     protocol_version: Literal["phase9-v1"] = "phase9-v1"
     data_config: str = "phase5.yaml"
+    phase8_reference_run: Literal["20260908T020044407464Z-24f4c0d4"] = (
+        "20260908T020044407464Z-24f4c0d4"
+    )
+    phase8_reference_code: Literal[
+        "75945fe70606c8200cebc66678d0e220db5fb0ad"
+    ] = "75945fe70606c8200cebc66678d0e220db5fb0ad"
+    phase8_reference_completion: Literal[
+        "sha256:9bce4a80c7e0d65fc40ccd4e1fea3c1ef2d56022f8b60720f3d1a8b54cfbb922"
+    ] = (
+        "sha256:9bce4a80c7e0d65fc40ccd4e1fea3c1ef2d56022f8b60720f3d1a8b54cfbb922"
+    )
     test_years: tuple[StrictInt, ...] = (2022, 2023, 2024)
     seeds: tuple[StrictInt, ...] = (20260906, 20260907)
     benchmark_variants: tuple[Literal["direct", "recursive"], ...] = (

@@ -1,6 +1,9 @@
 schema_version: 1
 protocol_version: phase9-v1
 data_config: phase5.yaml
+phase8_reference_run: 20260908T020044407464Z-24f4c0d4
+phase8_reference_code: 75945fe70606c8200cebc66678d0e220db5fb0ad
+phase8_reference_completion: sha256:9bce4a80c7e0d65fc40ccd4e1fea3c1ef2d56022f8b60720f3d1a8b54cfbb922
 test_years: [2022, 2023, 2024]
 seeds: [20260906, 20260907]
 benchmark_variants: [direct, recursive]

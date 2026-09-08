@@ -110,6 +110,23 @@ en probabilities blijven ongekalibreerd. Zie het
 [implementatiestatus](docs/phase7_implementation.md) en de
 [v0.2-model card](docs/model_card_v0.2.md).
 
+### Fase 8 — compact multi-timeframe neural challenger
+
+De formele `phase8-v1` benchmark is afgerond en geverifieerd met run
+`20260908T020044407464Z-24f4c0d4`. De compact GRU-core gebruikt
+`1min/3min/15min` voor 3–15m en `3min/15min/1h` voor 30–180m, twee frozen seeds
+en exact dezelfde outer samples als de Phase-7 champions.
+
+De neural challenger verbetert Brier en log loss, maar **0/8 horizons** verbeteren
+mean én worst-fold macro-F1. Geen horizon passeert predictive admission en alle
+inner-selected policies blijven cash/no-trade. De Phase-7 champions blijven daarom
+actief en de neural core gaat alleen als researchvariant mee naar Phase 9. De finale
+2025+ holdout blijft gesloten.
+
+Zie het [Phase-8 protocol](docs/research_protocol_phase8.md), het
+[verificatierapport](docs/phase8_verification.md) en de
+[implementatiestatus](docs/phase8_implementation.md).
+
 ### Fase 9 — direct future-candle path (in ontwikkeling)
 
 Op `feature/phase-9-future-path` staat inmiddels de structurele Phase-9 keten:
@@ -126,8 +143,9 @@ De volledige integratie kan zonder echte marktbenchmark worden getest met:
 .\.venv\Scripts\gold-forecast.exe phase9 validate reports/phase9_dry_run
 ```
 
-Er is bewust nog **geen** formeel `phase9 run`-commando. Eerst moet de canonieke
-Phase-8 run worden vastgesteld en als frozen reference worden gepind. Zie
+De canonieke Phase-8 run is nu frozen en cryptografisch gepind in `phase9-v1`.
+Er is bewust nog **geen** formeel `phase9 run`-commando totdat de echte frozen-reference
+loader en volledige real-data preflight zijn aangesloten. Zie
 [het fase-9-protocol](docs/research_protocol_phase9.md) en de
 [implementatiestatus](docs/phase9_implementation.md).
 

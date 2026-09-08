@@ -2,7 +2,7 @@
 
 **Protocol:** `phase8-v1`  
 **Release:** blijft `v0.2.0` totdat fase 8–10 samen `v0.3` rechtvaardigen  
-**Empirische status:** volledige 2020–2024 neural benchmark nog niet uitgevoerd
+**Empirische status:** formele 2020–2024 benchmark geverifieerd; 0/8 neural promotions
 
 ## Geïmplementeerd
 
@@ -39,26 +39,16 @@ future-candle-path. Die complexiteit mag pas na bewijs worden toegevoegd.
 
 ## Empirische gate
 
-De grote marktdata en de 50 GB phase-7 reference-run staan bewust niet in GitHub. De formele
-phase-8 benchmark moet daarom op de lokale machine met beide datasets worden uitgevoerd.
-De pipeline leest alleen kleine gehashte phase-7 referentie-artifacts voor vergelijking; hij
-wijzigt de bewaarde phase-7 run niet.
+De canonieke Phase-8 run is
+`20260908T020044407464Z-24f4c0d4` op benchmarkcommit `75945fe`.
+`phase8 validate` verifieerde 607 artifacts onder `phase8-v1`; de finale holdout
+bleef gesloten. Alle acht horizons behouden de frozen Phase-7 champion. Geen horizon
+passeert predictive admission of economic promotion.
 
-Na een groene lokale data-validatie is het formele commando:
-
-```powershell
-.\.venv\Scripts\gold-forecast.exe phase8 run --config configs/phase8.yaml
-```
-
-Daarna:
-
-```powershell
-.\.venv\Scripts\gold-forecast.exe phase8 validate reports/phase8_runs/<run-id>
-```
-
-Pas na inhoudelijke review van die run kunnen de empirische exitcriteria van fase 8 worden
-afgesloten. De finale 2025+ holdout blijft ook dan gesloten.
-
+De neural probabilities verbeteren Brier en log loss op alle horizons, maar mean en
+worst-fold macro-F1 zijn overal slechter. Alle geselecteerde policies vallen terug op
+cash/no-trade. Zie [het formele verificatierapport](phase8_verification.md) voor de
+volledige runtime-, fold-, class-discriminatie- en trainingaudit.
 
 ## Reproduceerbaarheidsnotitie
 
