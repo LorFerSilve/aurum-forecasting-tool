@@ -165,8 +165,8 @@ def audit_phase9_path_return(
         folds[fold] = fold_result
 
     aggregate: dict[str, Any] = {}
-    for variant, values in aggregate_values.items():
-        aggregate[variant] = {
+    for variant_name, values in aggregate_values.items():
+        aggregate[variant_name] = {
             "folds": values,
             "mean": float(np.mean(values)),
             "median": float(np.median(values)),
