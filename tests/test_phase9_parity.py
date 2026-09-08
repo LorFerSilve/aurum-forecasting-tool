@@ -110,7 +110,7 @@ def _reference_and_phase9() -> tuple[pd.DataFrame, pd.DataFrame]:
                     times.iloc[2],
                 ]
             ],
-            "exit_time_utc": [
+            "label_end_time_utc": [
                 value + pd.Timedelta(minutes=16)
                 for value in [
                     times.iloc[0]
@@ -120,13 +120,13 @@ def _reference_and_phase9() -> tuple[pd.DataFrame, pd.DataFrame]:
                     times.iloc[2],
                 ]
             ],
-            "entry_price": [
+            "entry_bid_open": [
                 2000.0,
                 2000.0,
                 2000.0,
                 2000.0,
             ],
-            "exit_price": [
+            "exit_bid_open": [
                 2000.0,
                 1998.4,
                 2000.2,
