@@ -74,7 +74,7 @@ def _write_runtime_lock(tmp_path) -> dict[str, str]:
         "pandas": "2.3.3",
         "scipy": "1.17.1",
         "scikit-learn": "1.9.0",
-        "torch": "2.14.0",
+        "torch": "2.11.0",
         "pyarrow": "23.0.1",
     }
     (tmp_path / "requirements.lock").write_text(
@@ -122,7 +122,7 @@ def test_locked_runtime_dependencies_accepts_local_cuda_build_tag(
 
     def installed(name: str) -> str:
         if name == "torch":
-            return "2.14.0+cu128"
+            return "2.11.0+cu128"
         return expected[name]
 
     monkeypatch.setattr(
@@ -131,4 +131,4 @@ def test_locked_runtime_dependencies_accepts_local_cuda_build_tag(
     )
 
     actual = _validate_locked_runtime_dependencies(tmp_path)
-    assert actual["torch"] == "2.14.0+cu128"
+    assert actual["torch"] == "2.11.0+cu128"
