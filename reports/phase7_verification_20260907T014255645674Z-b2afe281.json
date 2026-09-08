@@ -12,7 +12,7 @@
     "feature_spec_version": "sha256:590b7ee697163f36431f0cb74fe4e3405629b08e283992111aba785757484a98",
     "holdout_opened": false,
     "validation_verified_files": 11311,
-    "validation_completion_version": "sha256:beac58092d06350bb067fbd2df144bb9cb2507f45953c19487474c87d0ceca0f"
+    "validation_completion_version": "sha256:beac58092d06350bb067fbd2df144bb9cb2507f45053c19487474c87d0ceca0f"
   },
   "feature_coverage": {
     "anchor_rows": 534698,
@@ -68,5 +68,19 @@
     60
   ],
   "economic_promotion_candidates": 0,
-  "trading_champion": null
+  "trading_champion": null,
+  "audit_correction": {
+    "corrected_at": "2026-09-08",
+    "type": "completion_version_transcription_error",
+    "previous_recorded_version": "sha256:beac58092d06350bb067fbd2df144bb9cb2507f45953c19487474c87d0ceca0f",
+    "canonical_completion_version": "sha256:beac58092d06350bb067fbd2df144bb9cb2507f45053c19487474c87d0ceca0f",
+    "evidence": {
+      "completion_created_local": "2026-09-07 11:32:15",
+      "completion_last_written_local": "2026-09-07 11:32:15",
+      "validator_verified_files": 11311,
+      "validator_protocol": "phase7-v2"
+    },
+    "run_or_artifacts_modified": false,
+    "holdout_opened": false
+  }
 }

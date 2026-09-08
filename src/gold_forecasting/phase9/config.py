@@ -28,9 +28,9 @@ class Phase9Config(BaseModel):
         "3f0a703568224fe9169b1e9f8d61dad131f0005b"
     ] = "3f0a703568224fe9169b1e9f8d61dad131f0005b"
     phase7_reference_completion: Literal[
-        "sha256:beac58092d06350bb067fbd2df144bb9cb2507f45953c19487474c87d0ceca0f"
+        "sha256:beac58092d06350bb067fbd2df144bb9cb2507f45053c19487474c87d0ceca0f"
     ] = (
-        "sha256:beac58092d06350bb067fbd2df144bb9cb2507f45953c19487474c87d0ceca0f"
+        "sha256:beac58092d06350bb067fbd2df144bb9cb2507f45053c19487474c87d0ceca0f"
     )
     phase7_champion_config: str = "phase7_champion.yaml"
 

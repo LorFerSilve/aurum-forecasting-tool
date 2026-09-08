@@ -4,7 +4,7 @@ data_config: phase5.yaml
 
 phase7_reference_run: 20260907T014255645674Z-b2afe281
 phase7_reference_code: 3f0a703568224fe9169b1e9f8d61dad131f0005b
-phase7_reference_completion: sha256:beac58092d06350bb067fbd2df144bb9cb2507f45953c19487474c87d0ceca0f
+phase7_reference_completion: sha256:beac58092d06350bb067fbd2df144bb9cb2507f45053c19487474c87d0ceca0f
 phase7_champion_config: phase7_champion.yaml
 
 phase8_reference_run: 20260908T020044407464Z-24f4c0d4

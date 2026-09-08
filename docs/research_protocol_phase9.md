@@ -15,8 +15,12 @@ De klassieke Phase-7 fallback wordt eveneens cryptografisch gepind:
 - run: `20260907T014255645674Z-b2afe281`;
 - benchmarkcode: `3f0a703568224fe9169b1e9f8d61dad131f0005b`;
 - completion manifest:
-  `sha256:beac58092d06350bb067fbd2df144bb9cb2507f45953c19487474c87d0ceca0f`;
+  `sha256:beac58092d06350bb067fbd2df144bb9cb2507f45053c19487474c87d0ceca0f`;
 - 15min research champion: `mvp/logistic`.
+
+De Phase-7 completion-pin is op 2026-09-08 administratief gecorrigeerd na herverificatie
+van de oorspronkelijke run: de eerdere Git-evidence had één verkeerd overgenomen teken.
+De run zelf, zijn 11.311 artifacts en de gesloten holdout zijn ongewijzigd.
 
 De canonieke Phase-8 run is inmiddels formeel vastgesteld en vóór enig Phase-9
 marktresultaat in de benchmarkconfig vastgezet:
