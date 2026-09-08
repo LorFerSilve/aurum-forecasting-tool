@@ -136,16 +136,25 @@ Dezelfde 2022/2023/2024 nested walk-forwardstructuur en het 181-minuten-gapcontr
 voorbereid. Train-only pathscaling, common-sample referencepariteit, atomaire
 checkpoints/artifacts en een cryptografische validator zijn aanwezig.
 
-De volledige integratie kan zonder echte marktbenchmark worden getest met:
+De integratie en canonical preflight kunnen afzonderlijk worden gecontroleerd met:
 
 ```powershell
 .\.venv\Scripts\gold-forecast.exe phase9 dry-run --output reports/phase9_dry_run
 .\.venv\Scripts\gold-forecast.exe phase9 validate reports/phase9_dry_run
+.\.venv\Scripts\gold-forecast.exe phase9 preflight --config configs/phase9.yaml --report reports/phase9_preflight.json
 ```
 
-De canonieke Phase-8 run is nu frozen en cryptografisch gepind in `phase9-v1`.
-Er is bewust nog **geen** formeel `phase9 run`-commando totdat de echte frozen-reference
-loader en volledige real-data preflight zijn aangesloten. Zie
+Na de geslaagde canonical real-data preflight is het formele benchmarkcommando beschikbaar:
+
+```powershell
+.\.venv\Scripts\gold-forecast.exe phase9 run --config configs/phase9.yaml
+```
+
+`phase9 run` voert vóór het registreren van de formele run opnieuw de volledige
+fail-closed preflight uit. Daarna moet de voltooide run afzonderlijk met
+`phase9 validate reports/phase9_runs/<run-id>` worden geverifieerd.
+
+De canonieke Phase-7/8 references zijn cryptografisch gepind in `phase9-v1`. Zie
 [het fase-9-protocol](docs/research_protocol_phase9.md) en de
 [implementatiestatus](docs/phase9_implementation.md).
 

@@ -40,3 +40,21 @@ def test_exact_path_quantiles_produce_zero_median_error_and_full_coverage() -> N
         value == pytest.approx(0.0, abs=1e-9)
         for value in metrics["reconstructed_ohlc_mae_bps"].values()
     )
+    assert all(
+        value == pytest.approx(0.0, abs=1e-9)
+        for value in metrics["aggregate_reconstructed_ohlc_mae_bps"].values()
+    )
+    assert metrics["aggregate_reconstructed_range_mae_bps"] == pytest.approx(
+        0.0,
+        abs=1e-9,
+    )
+    assert all(
+        value == pytest.approx(0.0, abs=1e-9)
+        for value in metrics["path_vs_direct_aggregate_ohlc_mae_bps"].values()
+    )
+    assert metrics["path_vs_direct_aggregate_range_mae_bps"] == pytest.approx(
+        0.0,
+        abs=1e-9,
+    )
+    assert metrics["path_implied_direction"]["accuracy"] == pytest.approx(1.0)
+    assert 0.0 <= metrics["path_implied_direction"]["macro_f1"] <= 1.0

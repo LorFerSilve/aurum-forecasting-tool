@@ -2,7 +2,7 @@
 
 **Protocol:** `phase9-v1`  
 **Branch:** `feature/phase-9-future-path`  
-**Empirische status:** nog geen formele Phase-9 benchmark; canonieke Phase-8 reference is frozen
+**Empirische status:** canonieke real-data preflight geslaagd; formele Phase-9 benchmark nog niet uitgevoerd
 
 ## Reeds geïmplementeerd
 
@@ -46,22 +46,27 @@
 - behoud van de reeds geselecteerde frozen reference-policies;
 - real-data `phase9 preflight` voor data-identiteit, folds, referencepariteit,
   direct/recursive smokefits, quantile-invarianten en checkpoint-integriteit;
+- canonieke preflight op commit `6e46605` geslaagd met 525.967 common eligible rows,
+  CUDA/RTX 3080, beide varianten en gesloten holdout;
+- formele `phase9 run`-orchestration achter een opnieuw uitgevoerde fail-closed preflight;
+- run-level aggregatie versus frozen Phase-7/8 common-universe references zonder
+  automatische post-hoc promotiedrempel;
+- geaggregeerde path high/low/range-fout en path-vs-direct-15min consistency-evidence;
 - future-mutation guard: future labels veranderen, historische sequences niet;
 - unit tests voor targettiming, gaps, holdout, reconstructie, quantielen, losses,
   train-only scaling, common universe, training, reproduceerbaarheid, orchestration,
   artifacts, dry-run, referencepariteit en budget.
 
-## Bewust nog niet geopend
+## Formele benchmarkstatus
 
-Er is nog geen formele `phase9 run` CLI en geen empirische Phase-9 promotion decision.
-De canonieke Phase-8 reference is nu frozen in config/protocol. De train/predict-,
-recursive baseline-, walk-forward-, artifact-, validator- en common-sample bouwstenen
-bestaan al en de synthetic dry run oefent de volledige keten.
+De canonieke real-data preflight is lokaal volledig geslaagd. Daardoor mag het formele
+`phase9 run`-commando nu bestaan. Het commando opent echter pas een RunRegistry-directory
+nadat het **zelf opnieuw** dezelfde real-data preflight heeft uitgevoerd en daarna
+code-, data-, fold-, reference- en sample-digestpariteit opnieuw heeft bevestigd.
 
-De frozen-reference loader en de volledige preflightcode zijn nu aangesloten, maar de
-canonieke real-data preflight moet nog lokaal worden uitgevoerd tegen de grote Phase-7-
-en Phase-8-runmappen. Alleen een volledig geslaagde `phase9 preflight` mag de laatste
-technische blokkade voor het formele `phase9 run`-commando opheffen.
+De benchmark zelf is nog niet uitgevoerd. Er is dus nog geen empirische Phase-9 promotion
+decision. De runner schrijft alle vooraf vereiste evidence en zet promotion expliciet op
+`pending_post_benchmark_review`; hij promoveert niets automatisch.
 
 PR #3 blijft tot na de canonical benchmark draft. De finale 2025+ holdout blijft
 gesloten en Phase 8 blijft methodologisch frozen.

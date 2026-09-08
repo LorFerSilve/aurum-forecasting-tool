@@ -91,6 +91,18 @@ def preflight_phase9_research(
     )
 
 
+@phase9_app.command("run")
+def run_phase9_research(
+    config: ConfigOption = Path("configs/phase9.yaml"),
+) -> None:
+    """Run the canonical Phase-9 benchmark behind its embedded real-data preflight."""
+
+    from gold_forecasting.phase9.pipeline import run_phase9
+
+    output = run_phase9(config)
+    typer.echo(f"Completed phase 9: {output}")
+
+
 @phase8_app.command("run")
 def run_phase8_research(config: ConfigOption = Path("configs/phase8.yaml")) -> None:
     """Run the compact neural challenger against the frozen phase-7 reference."""

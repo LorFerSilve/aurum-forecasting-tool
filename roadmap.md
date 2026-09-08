@@ -26,10 +26,10 @@ Daarna vervangen of versterken we telkens één onderdeel. Na iedere fase blijft
 | Onderdeel | Huidige status |
 |---|---|
 | Systeemontwerp | Afgerond in `project_idea.md` |
-| Roadmap | Fasen 0–8 geverifieerd; fase 9 is geïmplementeerd tot en met de guarded real-data preflight |
-| Implementatie | `v0.2.0` blijft champion; Phase-9 future-path challenger + frozen-reference/preflight stack staat op de draft featurebranch |
+| Roadmap | Fasen 0–8 geverifieerd; fase 9 heeft een geslaagde canonical preflight en een guarded formal-run orchestration |
+| Implementatie | `v0.2.0` blijft champion; Phase-9 future-path benchmarkcode is klaar voor de canonieke formele run |
 | Huidige release | `v0.2.0` — betrouwbare price-only researchbenchmark |
-| Eerstvolgende stap | Canonieke Phase-9 real-data preflight; pas daarna het formele `phase9 run`-commando openen |
+| Eerstvolgende stap | Canonieke Phase-9 benchmark uitvoeren, daarna `phase9 validate` en promotion review |
 | Monte Carlo | Voorstel geaccepteerd; predictive MC in fase 12 na OOF/calibratie, strategy MC in fase 13 |
 | Standaard einddoel | Professioneel paper-trading-systeem |
 | Echte orders | Afzonderlijke, optionele laatste fase |
@@ -1016,12 +1016,13 @@ Meer fouten produceren dus meer leersignaal, maar we maken backpropagation niet 
 
 - [x] Fout per voorspelde stap.
 - [x] Cumulatieve 15min returnfout.
-- [ ] Direction accuracy van het geaggregeerde pad.
-- [ ] High/low/range coverage.
+- [x] Direction accuracy/macro-F1 van het geaggregeerde q50-pad.
+- [ ] High/low/range coverage als afgeleide fysieke quantielen; niet fabriceren uit niet-joint componentquantielen.
+- [x] High/low/range-fout van het geaggregeerde q50-pad.
 - [x] Quantile coverage en intervalbreedte.
-- [ ] Consistency tussen het pad en de directe 15min-head.
+- [x] Consistency tussen het pad en de directe 15min-head.
 - [x] Vergelijk direct multi-step met recursief one-step.
-- [ ] Meet of de path-head de uiteindelijke direction, calibration of nettoresultaten verbetert.
+- [ ] Meet in de formele benchmark of de path-head de uiteindelijke direction, calibration of nettoresultaten verbetert.
 
 ### Promotiebesluit
 

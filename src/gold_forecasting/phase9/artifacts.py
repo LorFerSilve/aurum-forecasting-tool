@@ -89,6 +89,7 @@ def write_phase9_run_contract(
     runtime: dict[str, Any],
     requirements_lock: str,
     neural_lock: str,
+    reference_metadata: dict[str, Any] | None = None,
 ) -> None:
     destination = Path(root)
     if not phase8_reference_run:
@@ -109,14 +110,25 @@ def write_phase9_run_contract(
             ],
         },
     )
+    reference_payload: dict[str, Any] = {
+        "phase8_reference_run": phase8_reference_run,
+        "code_version": code_version,
+    }
+    if reference_metadata is not None:
+        protected = {
+            "phase8_reference_run",
+            "code_version",
+        }
+        overlap = protected.intersection(reference_metadata)
+        if overlap:
+            raise Phase9ArtifactError(
+                "reference metadata may not overwrite protected keys: "
+                + ", ".join(sorted(overlap))
+            )
+        reference_payload.update(reference_metadata)
     write_json_atomic(
         destination / "reference.json",
-        {
-            "phase8_reference_run": (
-                phase8_reference_run
-            ),
-            "code_version": code_version,
-        },
+        reference_payload,
     )
     write_json_atomic(
         destination / "runtime.json",
@@ -317,10 +329,88 @@ def verify_phase9(
         raise Phase9ArtifactError(
             "phase-9 run has no phase-8 reference"
         )
+    run_mode = summary.get("run_mode")
+    if run_mode == "formal_benchmark":
+        resolved = json.loads(
+            (root / "resolved_config.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        config = Phase9Config.model_validate(resolved)
+        preflight = json.loads(
+            (root / "preflight.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        run = json.loads(
+            (root / "run.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        if (
+            preflight.get("status") != "passed"
+            or preflight.get("formal_run_opened") is not False
+            or preflight.get("holdout_opened") is not False
+        ):
+            raise Phase9ArtifactError(
+                "formal Phase-9 run lacks a passed pre-run preflight"
+            )
+        if (
+            reference.get("phase7_reference_run")
+            != config.phase7_reference_run
+            or reference.get("phase7_reference_code")
+            != config.phase7_reference_code
+            or reference.get("phase7_reference_completion")
+            != config.phase7_reference_completion
+            or reference.get("phase8_reference_run")
+            != config.phase8_reference_run
+            or reference.get("phase8_reference_code")
+            != config.phase8_reference_code
+            or reference.get("phase8_reference_completion")
+            != config.phase8_reference_completion
+        ):
+            raise Phase9ArtifactError(
+                "formal Phase-9 reference contract differs from frozen config"
+            )
+        if (
+            preflight.get("code_version") != run.get("code_version")
+            or summary.get("code_version") != run.get("code_version")
+        ):
+            raise Phase9ArtifactError(
+                "formal Phase-9 code identity differs from preflight/run evidence"
+            )
+        if (
+            preflight.get("data_version") != run.get("data_version")
+            or summary.get("data_version") != run.get("data_version")
+            or reference.get("preflight_data_version") != run.get("data_version")
+        ):
+            raise Phase9ArtifactError(
+                "formal Phase-9 data identity differs from preflight/run evidence"
+            )
+        expected_folds = {
+            f"test_{year}"
+            for year in config.test_years
+        }
+        folds = summary.get("folds")
+        if not isinstance(folds, dict) or set(folds) != expected_folds:
+            raise Phase9ArtifactError(
+                "formal Phase-9 summary does not contain every frozen outer fold"
+            )
+        promotion = summary.get("promotion_review")
+        if (
+            not isinstance(promotion, dict)
+            or promotion.get("automatic_promotion") is not False
+            or promotion.get("state") != "pending_post_benchmark_review"
+        ):
+            raise Phase9ArtifactError(
+                "formal Phase-9 run must defer promotion until verified review"
+            )
+
     result["protocol"] = "phase9-v1"
     result["phase8_reference_run"] = (
         reference_run
     )
+    result["run_mode"] = run_mode
     return result
 
 

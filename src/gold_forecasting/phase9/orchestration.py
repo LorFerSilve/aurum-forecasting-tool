@@ -280,6 +280,9 @@ def _evaluate_outer(
         clip_log_bps=(
             config.reconstruction_clip_log_bps
         ),
+        neutral_threshold_bps=(
+            config.neutral_threshold_bps
+        ),
     )
     return records, {
         "classification": _metrics(records),

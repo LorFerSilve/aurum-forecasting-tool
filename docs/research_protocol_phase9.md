@@ -32,9 +32,11 @@ marktresultaat in de benchmarkconfig vastgezet:
 - uitkomst: 0/8 neural predictive admissions en 0/8 economic promotions;
 - actieve fallback: de frozen Phase-7 champions.
 
-De implementatiebranch exposeert nog geen formeel `phase9 run`-commando. De frozen
-Phase-7/Phase-8 prediction loader en `phase9 preflight` zijn technisch aangesloten,
-maar de canonical real-data preflight moet eerst lokaal volledig slagen.
+De canonical real-data preflight is op 2026-09-08 volledig geslaagd op commit
+`6e466053f3e64aaad1f71b951b6d7a8cb008bda6` met 525.967 common eligible rows.
+Het formele `phase9 run`-commando is daarom vrijgegeven, maar voert vóór het openen
+van een formele run **opnieuw** dezelfde fail-closed preflight uit en eist daarna exacte
+code-, data-, fold-, sample- en frozen-referencepariteit.
 
 De finale holdout vanaf 2025-01-01 UTC blijft gesloten.
 
@@ -152,6 +154,7 @@ De formele pipeline moet minstens rapporteren:
 - cumulatieve path close-returnfout over 15 minuten;
 - high/low/rangefout van de geaggregeerde path;
 - direction accuracy/macro-F1 van de bestaande comparable direction head;
+- path-implied direction accuracy/macro-F1 op de bevroren 6 bps neutral zone;
 - consistency tussen reconstructed path en directe 15min-head;
 - neural direction/probability metrics versus de canonieke phase-8 neural variant;
 - dezelfde metrics versus de frozen phase-7 classical fallback;
@@ -193,7 +196,8 @@ Geen phase-9-uitkomst activeert paper of live trading.
 - canonical Phase-7/Phase-8 completion manifests en vereiste artifacts zijn intact;
 - actuele curated 1min/3min/15min data matcht de frozen Phase-8 source manifests;
 - frozen 15min predictions en policies pareren exact op iedere Phase-9 outer universe;
-- direct en recursive passeren elk een korte real-data forward/backward/checkpoint-smoke.
+- direct en recursive passeren elk een korte real-data forward/backward/checkpoint-smoke;
+- een formele run wordt pas geregistreerd nadat deze volledige preflight opnieuw is geslaagd.
 
 
 ## Common-sample referencepariteit

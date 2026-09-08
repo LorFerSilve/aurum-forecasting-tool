@@ -14,10 +14,14 @@ def test_phase9_defaults_freeze_five_three_minute_candles() -> None:
     assert config.protocol_version == "phase9-v1"
     assert config.phase7_reference_run == "20260907T014255645674Z-b2afe281"
     assert config.phase7_reference_code == "3f0a703568224fe9169b1e9f8d61dad131f0005b"
-    assert config.phase7_reference_completion.startswith("sha256:")
+    assert config.phase7_reference_completion == (
+        "sha256:beac58092d06350bb067fbd2df144bb9cb2507f45053c19487474c87d0ceca0f"
+    )
     assert config.phase8_reference_run == "20260908T020044407464Z-24f4c0d4"
     assert config.phase8_reference_code == "75945fe70606c8200cebc66678d0e220db5fb0ad"
-    assert config.phase8_reference_completion.startswith("sha256:")
+    assert config.phase8_reference_completion == (
+        "sha256:9bce4a80c7e0d65fc40ccd4e1fea3c1ef2d56022f8b60720f3d1a8b54cfbb922"
+    )
     assert config.test_years == (2022, 2023, 2024)
     assert len(config.seeds) == 2
     assert config.benchmark_variants == ("direct", "recursive")

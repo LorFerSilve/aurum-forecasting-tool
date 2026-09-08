@@ -116,3 +116,62 @@ def test_verify_phase9_detects_modified_artifact(
         match="digest mismatch",
     ):
         verify_phase9(root)
+
+
+def test_run_contract_persists_extra_reference_metadata(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "phase9-run"
+    root.mkdir()
+    config = Phase9Config()
+    write_phase9_run_contract(
+        root,
+        config=config,
+        folds=build_phase9_schedule(config),
+        phase8_reference_run=config.phase8_reference_run,
+        code_version="abc123",
+        runtime={"device": "cpu"},
+        requirements_lock="numpy==2.4.6\n",
+        neural_lock="torch==2.11.0\n",
+        reference_metadata={
+            "phase7_reference_run": config.phase7_reference_run,
+            "phase7_reference_completion": config.phase7_reference_completion,
+        },
+    )
+
+    reference = json.loads(
+        (root / "reference.json").read_text(encoding="utf-8")
+    )
+
+    assert reference["phase8_reference_run"] == config.phase8_reference_run
+    assert reference["phase7_reference_run"] == config.phase7_reference_run
+    assert (
+        reference["phase7_reference_completion"]
+        == config.phase7_reference_completion
+    )
+
+
+def test_run_contract_rejects_reference_metadata_overwrite(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "phase9-run"
+    root.mkdir()
+    config = Phase9Config()
+
+    with pytest.raises(
+        Phase9ArtifactError,
+        match="protected keys",
+    ):
+        write_phase9_run_contract(
+            root,
+            config=config,
+            folds=build_phase9_schedule(config),
+            phase8_reference_run=config.phase8_reference_run,
+            code_version="abc123",
+            runtime={"device": "cpu"},
+            requirements_lock="numpy==2.4.6\n",
+            neural_lock="torch==2.11.0\n",
+            reference_metadata={
+                "code_version": "unsafe-overwrite",
+            },
+        )
