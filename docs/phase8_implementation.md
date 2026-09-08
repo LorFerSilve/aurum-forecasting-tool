@@ -66,3 +66,11 @@ Formele Phase-8 runs weigeren voortaan vóór dataopbouw of training wanneer de
 geïnstalleerde kernpackages (`numpy`, `pandas`, `scipy`, `scikit-learn`, `torch`,
 `pyarrow`) niet overeenkomen met `requirements.lock`. CUDA-local buildtags zoals
 `+cu128` zijn toegestaan zolang de publieke PyTorch-versie gelijk is aan de lock.
+
+
+## Frozen PyTorch runtime
+
+Phase-8 formal runs use public package version `torch==2.11.0`. CI may use the
+CPU wheel. NVIDIA development runs use the matching official CUDA 12.8 wheel
+`torch==2.11.0+cu128`; the local `+cu128` build tag is accepted by the dependency
+guard because the frozen public version remains 2.11.0.

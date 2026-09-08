@@ -145,7 +145,7 @@ threadpoolctl==3.6.0
     # via
     #   gold-forecasting (pyproject.toml)
     #   scikit-learn
-torch==2.14.0
+torch==2.11.0
     # via gold-forecasting (pyproject.toml)
 typer==0.27.2
     # via gold-forecasting (pyproject.toml)
