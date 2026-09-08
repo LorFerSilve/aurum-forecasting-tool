@@ -361,24 +361,37 @@ def _load_verified_run(
     )
 
 
+def _finite_policy_value(
+    value: object,
+    *,
+    context: str,
+    name: str,
+) -> float:
+    if (
+        isinstance(value, bool)
+        or not isinstance(value, (int, float))
+        or not math.isfinite(float(value))
+    ):
+        raise Phase9ReferenceError(
+            f"{context} has invalid {name}"
+        )
+    return float(value)
+
+
 def _policy_from_payload(payload: object, *, context: str) -> DecisionPolicy:
     if not isinstance(payload, dict):
         raise Phase9ReferenceError(f"{context} is missing")
-    threshold = payload.get("confidence_threshold")
-    minimum = payload.get("min_expected_net_bps")
-    for name, value in (
-        ("confidence_threshold", threshold),
-        ("min_expected_net_bps", minimum),
-    ):
-        if (
-            isinstance(value, bool)
-            or not isinstance(value, (int, float))
-            or not math.isfinite(float(value))
-        ):
-            raise Phase9ReferenceError(f"{context} has invalid {name}")
     return DecisionPolicy(
-        confidence_threshold=float(threshold),
-        min_expected_net_bps=float(minimum),
+        confidence_threshold=_finite_policy_value(
+            payload.get("confidence_threshold"),
+            context=context,
+            name="confidence_threshold",
+        ),
+        min_expected_net_bps=_finite_policy_value(
+            payload.get("min_expected_net_bps"),
+            context=context,
+            name="min_expected_net_bps",
+        ),
     )
 
 
