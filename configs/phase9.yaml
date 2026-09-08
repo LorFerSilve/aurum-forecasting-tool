@@ -20,9 +20,24 @@ encoder_hidden_size: 32
 fusion_size: 32
 parameter_budget: 200000
 
+batch_size: 2048
+max_epochs: 24
+early_stopping_patience: 4
+learning_rate: 0.001
+weight_decay: 0.0001
+gradient_clip_norm: 1.0
+class_weighting: none
+
 direction_loss_weight: 1.0
+return_loss_weight: 0.25
+range_loss_weight: 0.10
+volatility_loss_weight: 0.10
 path_quantile_loss_weight: 1.0
 aggregate_quantile_loss_weight: 0.25
+cumulative_return_loss_weight: 0.25
 temporal_consistency_loss_weight: 0.10
 
+device: auto
+mixed_precision: true
+deterministic_algorithms: true
 output_directory: reports/phase9_runs

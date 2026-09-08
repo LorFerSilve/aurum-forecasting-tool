@@ -38,11 +38,26 @@ class Phase9Config(BaseModel):
     fusion_size: StrictInt = Field(default=32, ge=8, le=128)
     parameter_budget: StrictInt = Field(default=200_000, ge=10_000, le=1_000_000)
 
+    batch_size: StrictInt = Field(default=2048, ge=32, le=16_384)
+    max_epochs: StrictInt = Field(default=24, ge=2, le=100)
+    early_stopping_patience: StrictInt = Field(default=4, ge=1, le=20)
+    learning_rate: float = Field(default=1e-3, gt=0.0, le=0.1)
+    weight_decay: float = Field(default=1e-4, ge=0.0, le=0.1)
+    gradient_clip_norm: float = Field(default=1.0, gt=0.0, le=10.0)
+    class_weighting: Literal["none", "balanced"] = "none"
+
     direction_loss_weight: float = Field(default=1.0, gt=0.0, le=10.0)
+    return_loss_weight: float = Field(default=0.25, ge=0.0, le=10.0)
+    range_loss_weight: float = Field(default=0.10, ge=0.0, le=10.0)
+    volatility_loss_weight: float = Field(default=0.10, ge=0.0, le=10.0)
     path_quantile_loss_weight: float = Field(default=1.0, gt=0.0, le=10.0)
     aggregate_quantile_loss_weight: float = Field(default=0.25, ge=0.0, le=10.0)
+    cumulative_return_loss_weight: float = Field(default=0.25, ge=0.0, le=10.0)
     temporal_consistency_loss_weight: float = Field(default=0.10, ge=0.0, le=10.0)
 
+    device: Literal["auto", "cpu", "cuda"] = "auto"
+    mixed_precision: bool = True
+    deterministic_algorithms: bool = True
     output_directory: str = "reports/phase9_runs"
 
     @model_validator(mode="after")
@@ -57,6 +72,8 @@ class Phase9Config(BaseModel):
             raise ValueError("sequence_lengths must follow the timeframe order")
         if any(value < 2 or value > 120 for value in self.sequence_lengths.values()):
             raise ValueError("sequence lengths must be between 2 and 120 candles")
+        if self.early_stopping_patience >= self.max_epochs:
+            raise ValueError("early stopping patience must be smaller than max_epochs")
         data = Path(self.data_config)
         if data.is_absolute() or ".." in data.parts or data.suffix.lower() not in {
             ".yaml",

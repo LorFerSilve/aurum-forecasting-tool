@@ -63,6 +63,17 @@ class PathTargetNormalizer:
             raise Phase9NormalizationError("invalid normalized path array")
         return array * self.path_scales
 
+    def inverse_path_quantiles(self, values: np.ndarray) -> NDArray[np.float64]:
+        array = np.asarray(values, dtype=np.float64)
+        if (
+            array.ndim < 4
+            or array.shape[-3:-1] != self.path_scales.shape
+            or array.shape[-1] != 3
+            or not np.isfinite(array).all()
+        ):
+            raise Phase9NormalizationError("invalid normalized path quantiles")
+        return array * self.path_scales[..., None]
+
     def transform_aggregate(self, values: np.ndarray) -> NDArray[np.float32]:
         array = np.asarray(values, dtype=np.float64)
         if array.shape[-1:] != self.aggregate_scales.shape or not np.isfinite(array).all():
@@ -74,6 +85,17 @@ class PathTargetNormalizer:
         if array.shape[-1:] != self.aggregate_scales.shape or not np.isfinite(array).all():
             raise Phase9NormalizationError("invalid normalized aggregate array")
         return array * self.aggregate_scales
+
+    def inverse_aggregate_quantiles(self, values: np.ndarray) -> NDArray[np.float64]:
+        array = np.asarray(values, dtype=np.float64)
+        if (
+            array.ndim < 3
+            or array.shape[-2:-1] != self.aggregate_scales.shape
+            or array.shape[-1] != 3
+            or not np.isfinite(array).all()
+        ):
+            raise Phase9NormalizationError("invalid normalized aggregate quantiles")
+        return array * self.aggregate_scales[..., None]
 
     def as_record(self) -> dict[str, object]:
         return {
