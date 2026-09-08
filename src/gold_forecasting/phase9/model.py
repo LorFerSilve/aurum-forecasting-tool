@@ -237,8 +237,8 @@ __all__ = [
     "QUANTILES",
     "FuturePathGRU",
     "OrderedQuantileHead",
-    "RecursiveFuturePathGRU",
-    "RecursiveQuantilePathHead",
     "Phase9ModelError",
     "Phase9Outputs",
+    "RecursiveFuturePathGRU",
+    "RecursiveQuantilePathHead",
 ]
