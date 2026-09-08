@@ -173,20 +173,22 @@ def evaluate_future_path(
         )
     )
 
-    predicted_cumulative = (
-        aggregate_prediction[:, 0, 1]
-        + aggregate_prediction[:, 1, 1]
-    )
     true_cumulative = labels[
         "path_15m_close_return_log_bps"
     ].to_numpy(dtype=np.float64)
-    cumulative_mae = float(np.mean(np.abs(predicted_cumulative - true_cumulative)))
-
     path_implied_return = (
         10_000.0
         * np.log(
             reconstructed_aggregate[:, 3]
             / anchor
+        )
+    )
+    cumulative_mae = float(
+        np.mean(
+            np.abs(
+                path_implied_return
+                - true_cumulative
+            )
         )
     )
     predicted_class = np.where(
