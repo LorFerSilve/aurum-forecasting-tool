@@ -84,7 +84,7 @@ def _locked_runtime_versions(root: Path) -> dict[str, str]:
 
     lock_path = root / "requirements.lock"
     versions: dict[str, str] = {}
-    pattern = re.compile(r"^([A-Za-z0-9_.-]+)==([^\\s;]+)")
+    pattern = re.compile(r"^([A-Za-z0-9_.-]+)==([^\s;]+)")
     for raw_line in lock_path.read_text(encoding="utf-8").splitlines():
         match = pattern.match(raw_line.strip())
         if match is None:
