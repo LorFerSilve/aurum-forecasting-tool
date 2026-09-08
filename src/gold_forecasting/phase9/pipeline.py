@@ -978,9 +978,10 @@ def run_phase9(
             for variant in config.benchmark_variants
         }
 
-        aggregate_summary: dict[str, Any] = dict(
-            variant_aggregates
-        )
+        aggregate_summary: dict[str, Any] = {
+            str(name): metrics
+            for name, metrics in variant_aggregates.items()
+        }
         aggregate_summary["phase7_frozen"] = phase7_aggregate
         aggregate_summary["phase8_frozen"] = phase8_aggregate
 
