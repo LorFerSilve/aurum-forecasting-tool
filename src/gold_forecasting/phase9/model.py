@@ -133,7 +133,10 @@ class FuturePathGRU(nn.Module):
             raise Phase9ModelError(
                 f"phase-9 core violates model contract: {exc}"
             ) from exc
-        self.path_head = OrderedQuantileHead(
+        self.path_head: (
+            OrderedQuantileHead
+            | RecursiveQuantilePathHead
+        ) = OrderedQuantileHead(
             fusion_size,
             steps=PATH_STEPS,
             components=len(PATH_COMPONENTS),
