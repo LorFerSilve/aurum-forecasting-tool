@@ -5,7 +5,14 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field, StrictInt, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    StrictInt,
+    field_validator,
+    model_validator,
+)
 
 from gold_forecasting.config import _load_yaml_mapping
 
@@ -113,6 +120,23 @@ class Phase9Config(BaseModel):
     deterministic_algorithms: bool = True
     output_directory: str = "reports/phase9_runs"
 
+    @field_validator("sequence_lengths", mode="before")
+    @classmethod
+    def canonicalize_sequence_lengths(
+        cls,
+        value: object,
+    ) -> object:
+        """Treat mapping key order as serialization detail, not benchmark semantics."""
+
+        if not isinstance(value, dict):
+            return value
+        if set(value) != set(_PATH_TIMEFRAMES):
+            return value
+        return {
+            timeframe: value[timeframe]
+            for timeframe in _PATH_TIMEFRAMES
+        }
+
     @model_validator(mode="after")
     def validate_scope(self) -> Self:
         if self.test_years != (2022, 2023, 2024):
@@ -141,9 +165,13 @@ class Phase9Config(BaseModel):
             raise ValueError(
                 "phase9-v1 core timeframes must be 1min, 3min, 15min"
             )
+        if set(self.sequence_lengths) != set(self.timeframes):
+            raise ValueError(
+                "sequence_lengths must contain exactly the frozen core timeframes"
+            )
         if tuple(self.sequence_lengths) != self.timeframes:
             raise ValueError(
-                "sequence_lengths must follow the timeframe order"
+                "sequence_lengths were not canonicalized to the timeframe order"
             )
         if any(
             value < 2 or value > 120

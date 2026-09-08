@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -49,4 +50,55 @@ def test_phase9_rejects_changed_benchmark_variant_order() -> None:
     with pytest.raises(ValidationError, match="direct first"):
         Phase9Config(
             benchmark_variants=("recursive", "direct"),
+        )
+
+
+def test_phase9_config_accepts_canonical_sorted_json_roundtrip() -> None:
+    """Persisted resolved_config.json sorts mapping keys and must remain valid."""
+
+    original = Phase9Config()
+    persisted = json.loads(
+        json.dumps(
+            original.model_dump(mode="json"),
+            sort_keys=True,
+        )
+    )
+
+    assert tuple(persisted["sequence_lengths"]) == (
+        "15min",
+        "1min",
+        "3min",
+    )
+
+    restored = Phase9Config.model_validate(persisted)
+
+    assert restored.sequence_lengths == original.sequence_lengths
+    assert tuple(restored.sequence_lengths) == restored.timeframes
+
+
+def test_phase9_config_rejects_missing_sequence_timeframe() -> None:
+    with pytest.raises(
+        ValidationError,
+        match="frozen core timeframes",
+    ):
+        Phase9Config(
+            sequence_lengths={
+                "1min": 60,
+                "3min": 20,
+            },
+        )
+
+
+def test_phase9_config_rejects_extra_sequence_timeframe() -> None:
+    with pytest.raises(
+        ValidationError,
+        match="frozen core timeframes",
+    ):
+        Phase9Config(
+            sequence_lengths={
+                "1min": 60,
+                "3min": 20,
+                "15min": 8,
+                "1h": 2,
+            },
         )
