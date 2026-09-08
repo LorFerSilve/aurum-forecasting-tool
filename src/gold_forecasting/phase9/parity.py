@@ -32,8 +32,16 @@ def restrict_reference_to_phase9_universe(
         "sample_id",
         "prediction_time_utc",
         "target_class_id",
+        "target_class",
+        "predicted_class",
         "arithmetic_return_bps",
         "expected_return_bps",
+        "entry_time_utc",
+        "label_end_time_utc",
+        "entry_bid_open",
+        "exit_bid_open",
+        "horizon_minutes",
+        "instrument",
         *PROBABILITY_COLUMNS,
     }
     required_phase9 = {

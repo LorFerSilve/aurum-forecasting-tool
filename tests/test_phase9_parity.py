@@ -69,6 +69,12 @@ def _reference_and_phase9() -> tuple[pd.DataFrame, pd.DataFrame]:
                 "neutral",
                 "up",
             ],
+            "predicted_class": [
+                "neutral",
+                "down",
+                "neutral",
+                "up",
+            ],
             "arithmetic_return_bps": [
                 0.0,
                 -8.0,
