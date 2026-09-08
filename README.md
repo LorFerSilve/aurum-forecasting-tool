@@ -110,6 +110,23 @@ en probabilities blijven ongekalibreerd. Zie het
 [implementatiestatus](docs/phase7_implementation.md) en de
 [v0.2-model card](docs/model_card_v0.2.md).
 
+### Fase 8 — compact multi-timeframe neural challenger
+
+De formele `phase8-v1` benchmark is afgerond en geverifieerd met run
+`20260908T020044407464Z-24f4c0d4`. De compact GRU-core gebruikt
+`1min/3min/15min` voor 3–15m en `3min/15min/1h` voor 30–180m, twee frozen seeds
+en exact dezelfde outer samples als de Phase-7 champions.
+
+De neural challenger verbetert Brier en log loss, maar **0/8 horizons** verbeteren
+mean én worst-fold macro-F1. Geen horizon passeert predictive admission en alle
+inner-selected policies blijven cash/no-trade. De Phase-7 champions blijven daarom
+actief en de neural core gaat alleen als researchvariant mee naar Phase 9. De finale
+2025+ holdout blijft gesloten.
+
+Zie het [Phase-8 protocol](docs/research_protocol_phase8.md), het
+[verificatierapport](docs/phase8_verification.md) en de
+[implementatiestatus](docs/phase8_implementation.md).
+
 `data import` downloadt uitsluitend de uit `configs/splits_mvp.yaml` afgeleide
 ontwikkelingsjaren. Ruwe bronbestanden en afgeleide datasets worden lokaal gehouden en zijn
 door `.gitignore` van versiebeheer uitgesloten. Zodra de data aanwezig en geldig is, hergebruikt
