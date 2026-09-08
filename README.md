@@ -110,6 +110,16 @@ en probabilities blijven ongekalibreerd. Zie het
 [implementatiestatus](docs/phase7_implementation.md) en de
 [v0.2-model card](docs/model_card_v0.2.md).
 
+### Fase 9 — direct future-candle path (in ontwikkeling)
+
+Op `feature/phase-9-future-path` wordt de volgende challenger voorbereid: vijf
+toekomstige 3min-candles in één forward pass, met geordende 10/50/90%-quantielen en
+een afzonderlijke directe 15min-candle-head. De path-reconstructie garandeert geldige
+OHLC-candles. Er is bewust nog geen formele Phase-9 benchmark-CLI zolang de canonieke
+Phase-8 reference niet is vastgesteld. Zie
+[het fase-9-protocol](docs/research_protocol_phase9.md) en de
+[implementatiestatus](docs/phase9_implementation.md).
+
 `data import` downloadt uitsluitend de uit `configs/splits_mvp.yaml` afgeleide
 ontwikkelingsjaren. Ruwe bronbestanden en afgeleide datasets worden lokaal gehouden en zijn
 door `.gitignore` van versiebeheer uitgesloten. Zodra de data aanwezig en geldig is, hergebruikt
