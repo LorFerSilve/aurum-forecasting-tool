@@ -10,11 +10,11 @@ import pytest
 
 from gold_forecasting.evaluation.walk_forward import make_walk_forward_folds
 from gold_forecasting.phase10.artifacts import (
-    PROTOCOL,
-    Phase10ArtifactError,
     _EVALUATION_FILES,
     _FOLD_FILES,
     _ROOT_FILES,
+    PROTOCOL,
+    Phase10ArtifactError,
     _expected_files,
     _identity,
     _inventory,
