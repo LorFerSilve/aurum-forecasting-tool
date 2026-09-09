@@ -229,10 +229,14 @@ def load_context_bundle(
         f"context {manifest.format.upper()}",
     )
     if hashlib.sha256(payload).hexdigest() != manifest.sha256.lower():
-        raise ValueError(\n            f"context {manifest.format.upper()} SHA-256 differs from bundle manifest"\n        )
+        raise ValueError(
+            f"context {manifest.format.upper()} SHA-256 differs from bundle manifest"
+        )
     frame = _load_csv(payload) if manifest.format == "csv" else _load_parquet(payload)
     if len(frame) != manifest.row_count:
-        raise ValueError(\n            f"context {manifest.format.upper()} row_count differs from bundle manifest"\n        )
+        raise ValueError(
+            f"context {manifest.format.upper()} row_count differs from bundle manifest"
+        )
     result = validate_observations(frame, source)
     if (
         (result["observed_at_utc"] < start)
