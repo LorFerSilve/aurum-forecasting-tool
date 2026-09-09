@@ -210,8 +210,9 @@ def parse_histdata_xagusd_archive(
     _validate_source(source)
     if type(year) is not int or year not in range(2020, 2025):
         raise SilverHistDataError("XAGUSD development archive year must be 2020-2024")
-    path = Path(archive_path).expanduser().resolve()
-    payload = _read_archive(path)
+    supplied_path = Path(archive_path).expanduser()
+    payload = _read_archive(supplied_path)
+    path = supplied_path.resolve()
     digest = hashlib.sha256(payload).hexdigest()
     ingested = _as_utc(ingested_at_utc, name="ingested_at_utc")
 
@@ -269,7 +270,7 @@ def parse_histdata_xagusd_archive(
     observations = pd.DataFrame(
         {
             "source_id": source.source_id,
-            "observation_id": "xagusd-m1-" + identifier,
+            "observation_id": ("xagusd-m1-" + identifier).to_numpy(),
             "observed_at_utc": observed.array,
             "available_at_utc": available.array,
             "ingested_at_utc": ingested,
@@ -332,8 +333,11 @@ def import_histdata_silver_archives(
         or not set(years) <= set(range(2020, 2025))
     ):
         raise SilverHistDataError("years must be a sorted unique subset of 2020-2024")
-    raw = Path(archive_directory).expanduser().resolve(strict=True)
-    if raw.is_symlink() or not raw.is_dir():
+    supplied_raw = Path(archive_directory).expanduser()
+    if supplied_raw.is_symlink():
+        raise SilverHistDataError("archive_directory must not be a symlink")
+    raw = supplied_raw.resolve(strict=True)
+    if not raw.is_dir():
         raise SilverHistDataError("archive_directory must be a real directory")
 
     destination = Path(output_directory).expanduser().resolve()
