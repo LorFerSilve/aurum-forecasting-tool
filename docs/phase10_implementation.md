@@ -1,10 +1,11 @@
 # Fase 10 — externe context en eventinformatie
 
-**Status:** technische ontwikkelbasis; nog geen formele marktbenchmark of `v0.3`-release.
+**Status:** exploratory real-data runner en validator geïmplementeerd; nog geen echte XAGUSD markt-run of `v0.3`-release.
 
 **Branch:** `codex/phase10-external-context`
 
-**Proefprotocol:** `phase10-context-smoke-v1` (uitsluitend synthetisch).
+**Proefprotocol:** `phase10-context-smoke-v1` (synthetisch).  
+**Exploratory protocol:** `phase10-silver-modeled-v1` (real-data XAGUSD met modeled latency).
 
 Phase 9 is op `main` gemerged in `9a15e04`. De onafhankelijke hercontrole op
 2026-09-09 verifieerde de 225 canonieke artefacten en reproduceerde de opgeslagen
@@ -140,32 +141,59 @@ bevroren admissionregels.
 
 ## Resterend werk vóór afronding van fase 10
 
-1. Importeer en verifieer de echte lokale XAGUSD 2020–2024 annual archives.
-2. Draai de real-data source preflight en inspecteer coverage/staleness/alignment.
-3. Implementeer de frozen Phase-7 15m reference-pariteit en logistic silver challenger
-   conform `phase10-silver-modeled-v1`.
-4. Voer de modeled-latency exploratory ablation uit. Deze kan nooit championpromotie
-   activeren; een positief signaal rechtvaardigt alleen het zoeken van strict-PIT evidence.
-5. Alleen wanneer historische provider-release-evidence beschikbaar komt, mag een
-   strict `phase10-context-v1` silver benchmark worden geopend.
-6. Herhaal de broncyclus daarna voor dollar, rente en de eventbronnen. Historische
-   schedule-vintages zijn vereist; consensus/surprise blijft uit totdat daarvoor
-   afzonderlijk point-in-time bewijs bestaat.
+De code voor de eerste silver ablation is nu gereed. De frozen Phase-7 15m
+`mvp/logistic` reference wordt cryptografisch geauthenticeerd; het volledige gold
+sample-universe, inner folds, outer folds en sample-digests moeten exact paritair zijn.
+De silver challenger gebruikt uitsluitend dezelfde drie logistic `C`-waarden als
+Phase 7 en behoudt `class_weight="balanced"`. Onbruikbare of fail-closed silverrows
+vallen exact terug op de persisted Phase-7 probabilities.
 
-De technische proefresultaten mogen geen Phase-9 artefacten, championconfiguratie,
-holdoutbesluit, probability-calibratie of paper/live trading activeren.
+De real-data preflight verifieert vóór RunRegistry-creatie:
+
+1. de vijf lokale XAGUSD 2020–2024 ZIP-archieven;
+2. archive/partition/bundle hashes en provenance;
+3. de frozen Phase-7 completion en alle gebruikte reference predictions;
+4. dezelfde gold curated datasets en Phase-7 featureconfig;
+5. exact hetzelfde 15m sample-universe en 181-minuten foldcontract;
+6. causal silver alignment, coverage, stale/missing en feature-warmup;
+7. een clean committed Git identity;
+8. `holdout_opened=false`.
+
+De exploratory runner bewaart config/source/source-code snapshots, features,
+reference- en challengerpredictions, inner selectie, trainingaudits, base/stress
+backtests en een completionmanifest. De validator replayt artifact inventory,
+reference hashes, gold alignment, causal silverfeatures, fallback, selected
+three-C logistic grid, policyselectie, metrics en run-level admission gates.
+
+Wat nog daadwerkelijk uitgevoerd moet worden:
+
+1. zorg dat de echte XAGUSD 2020–2024 jaarlijkse ZIPs lokaal aanwezig zijn;
+2. importeer ze met `phase10 silver-import`;
+3. draai de real-data `phase10 preflight --config ...`;
+4. inspecteer coverage/alignment en los alleen echte preflightproblemen op;
+5. alleen na een volledig groene preflight: draai de modeled-latency exploratory run;
+6. valideer de run met `phase10 validate`;
+7. neem daarna een expliciet `stop` of `seek_strict_source` besluit.
+
+Ook een positieve exploratory uitkomst kan geen championpromotie activeren.
+Een strict `phase10-context-v1` benchmark blijft geblokkeerd totdat echte
+historische provider-release-evidence beschikbaar is. Dollar, rente en eventbronnen
+komen pas na de silverbeslissing aan bod.
 
 ## Verificatie — 2026-09-09
 
-- Volledige projectsuite: **804 passed, 1 skipped** in 90,98 seconden. Alleen de
-  symlinktest is overgeslagen omdat deze Windows-host geen symlinks mag maken.
-- Ruff, strikte mypy (88 bronbestanden), `pip check` en sdist/wheel-build geslaagd.
+- GitHub CI op de actuele Phase-10 branch: **911 passed** in 101,83 seconden.
+- Ruff volledig groen; strikte mypy: **95 bronbestanden, 0 issues**.
+- De nieuwe tests dekken reference-authenticatie, exact gold-universe, archive/bundle
+  provenance, causal silverfeatures, nested train-only selectie, exact fallbackgedrag,
+  run-sealing lifecycle en artifact inventory.
 - CLI-proefrun `reports/phase10_dry_run_20260909`: **8 artefacten** geverifieerd,
   895 synthetische prediction rows en 178 testrows per variant.
 - Bij tijdelijke uitval/vensterherstel gebruiken 55 testrows exact de price-only
   probabilities; zonder bron vallen alle 178 testrows exact daarop terug.
-- Bronpreflight geeft de verwachte blokkades voor de uitgeschakelde, nog niet
-  point-in-time bewezen zilverbron. Dit is geen geslaagde real-data preflight.
+- De disabled strict bronpreflight blijft terecht geblokkeerd. De nieuwe real-data
+  preflight/runner is geïmplementeerd maar nog niet tegen de lokale 2020–2024 XAGUSD
+  archive-set uitgevoerd; er is dus nog geen empirisch silverresultaat.
 
 Het compacte [verificatiebewijs](../reports/phase10_verification_20260909.json)
 bevat ook SHA-256-hashes van de nieuwe implementatie en het completionmanifest.

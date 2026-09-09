@@ -186,23 +186,33 @@ De volledige run schrijft:
 
 ### Fase 10 — externe context (in ontwikkeling)
 
-De eerste uitvoerbare contextketen bevat een generiek contract met release- en
-revisietijden, gecontroleerde lokale CSV/Parquet-bundles, backward as-of joins,
-zilverfeatures en expliciete price-only fallback bij bronuitval. Real-data context
-kan als jaarlijkse Parquet-partities in een geauthenticeerde bundle-set worden bewaard.
-Een versieerbare eventkalender ondersteunt schemawijzigingen, annuleringen en DST-controles.
+Phase 10 heeft nu zowel de generieke point-in-time contextlaag als de eerste
+real-data silver-ablationketen. XAGUSD wordt via een afzonderlijke HistData-adapter
+als jaarlijkse geauthenticeerde Parquetpartities geladen; de frozen XAUUSD-ingestie
+blijft ongewijzigd. Backward as-of joins, stale/missing routing, causal silverfeatures
+en exacte Phase-7 price-only fallback zijn afgedwongen.
+
+De real-data silver runner gebruikt uitsluitend de frozen Phase-7 15m
+`mvp/logistic` champion als baseline, exact dezelfde 2022/2023/2024 folds en
+181-minuten gap, en dezelfde drie logistic `C`-waarden met balanced class weighting.
+De volledige gold sample-ID/value parity wordt vóór training bewezen.
 
 ```powershell
-.\.venv\Scripts\gold-forecast.exe phase10 preflight
-.\.venv\Scripts\gold-forecast.exe phase10 dry-run --output reports/phase10_dry_run
-.\.venv\Scripts\gold-forecast.exe phase10 validate reports/phase10_dry_run
+\.\.venv\Scripts\gold-forecast.exe phase10 silver-import --archive-directory <XAGUSD-map> --output data/context/phase10/silver --source configs/phase10_silver_exploratory.yaml
+\.\.venv\Scripts\gold-forecast.exe phase10 preflight --config configs/phase10_silver_ablation.yaml --report reports/phase10_preflight.json
+\.\.venv\Scripts\gold-forecast.exe phase10 run --config configs/phase10_silver_ablation.yaml
+\.\.venv\Scripts\gold-forecast.exe phase10 validate reports/phase10_runs/<run-id>
 ```
 
-De proefrun gebruikt uitsluitend synthetische data. De strict silver-config blijft
-bewust geblokkeerd. Een aparte exploratory config kan lokale XAGUSD-archieven importeren
-met modeled availability (candle close + 60s); zo'n run kan nooit strict-PIT admission
-of championpromotie activeren. Er is nog geen formele contextbenchmark of bronpromotie.
-Zie [het Phase-10 protocol](docs/research_protocol_phase10.md) en
+HistData levert geen historische per-row release timestamps. Daarom blijft
+`available_at = candle close + 60s` expliciet **modeled latency**. De run is uitsluitend
+exploratory: hij kan nooit de champion wijzigen of trading activeren. Een positief resultaat
+kan alleen de beslissing `seek_strict_source` rechtvaardigen. De 2025+ holdout blijft
+gesloten.
+
+De runner/validator zijn geïmplementeerd en CI is groen; de echte lokale XAGUSD
+2020–2024 preflight en markt-run zijn nog niet uitgevoerd. Zie
+[het Phase-10 protocol](docs/research_protocol_phase10.md) en
 [de implementatiestatus](docs/phase10_implementation.md).
 
 ## Kwaliteitscontroles

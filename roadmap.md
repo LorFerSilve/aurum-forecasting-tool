@@ -1134,13 +1134,20 @@ Historische provider-release-evidence ontbreekt echter nog: modeled latency is
 daarom uitsluitend exploratory en kan geen championpromotie activeren.
 Het vooraf bevroren protocol staat in
 [docs/research_protocol_phase10.md](docs/research_protocol_phase10.md).
-Er is nog geen real-data market ablation, contextpromotie of `v0.3`-release.
+De frozen Phase-7 reference-loader, real-data XAGUSD preflight, nested logistic
+silver challenger, run-artifacts en validator zijn nu eveneens geïmplementeerd en
+CI-groen. De echte lokale XAGUSD 2020–2024 preflight/market ablation is nog niet
+uitgevoerd; er is dus nog geen contextpromotie of `v0.3`-release.
 
 ### Exitcriteria
 
-- Iedere contextwaarde is point-in-time traceerbaar.
-- Alleen bewezen nuttige bronnen staan standaard aan.
-- `v0.3` blijft zonder context terugvallen op een werkende price-only champion.
+- [x] Iedere geïmplementeerde contextwaarde is point-in-time/aannametraceerbaar.
+- [x] De silver challenger behoudt exact hetzelfde gold sample-universe en kan volledig
+  terugvallen op de frozen price-only champion.
+- [x] Modeled-latency evidence kan technisch geen championpromotie activeren.
+- [ ] Voer de echte XAGUSD 2020–2024 exploratory ablation uit en neem het silverbesluit.
+- [ ] Voeg alleen bronnen met bewezen strict-PIT meerwaarde standaard toe.
+- [ ] Bevries uiteindelijk de Phase-10 bronset vóór `v0.3`.
 
 ---
 
