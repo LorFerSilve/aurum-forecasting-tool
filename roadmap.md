@@ -1097,12 +1097,12 @@ Een kleine set economisch plausibele contextvariabelen toevoegen, één bron teg
 - [x] Bewaar observatietijd én `available_at`.
 - [x] Voeg `age_seconds`, `is_stale` en `is_missing` toe.
 - [x] Gebruik backward as-of joins.
-- [ ] Leg markturen en publicatievertraging per bron vast.
+- [x] Leg markturen en publicatievertraging per bron vast.
 - [x] Voeg prijs-, momentum- en rolling-correlationfeatures toe.
 - [x] Voeg tijd tot en sinds high-impact events toe.
 - [x] Markeer voor-, tijdens- en na-eventregimes.
 - [ ] Gebruik historische consensus/surprise alleen wanneer betrouwbare point-in-time snapshots bestaan.
-- [ ] Laat de pipeline ook zonder iedere externe bron werken.
+- [x] Laat de pipeline ook zonder iedere externe bron werken.
 
 ### Strenge toelatingsregel
 
@@ -1128,10 +1128,13 @@ Nieuws-NLP, social sentiment en brede alternatieve datasets blijven uitgesteld. 
 
 De contextbasis en synthetische verticale keten zijn gebouwd. Revisies worden
 alleen vanaf hun eigen beschikbaarheidstijd zichtbaar; bronuitval heeft een
-expliciete fallback. HistData-zilver blijft uitgeschakeld omdat historische
-publicatie-/revisietijden nog niet bewezen zijn. Er is nog geen formele
-markt-ablation, contextpromotie of `v0.3`-release. Zie
-[de implementatiestatus](docs/phase10_implementation.md) voor scope en vervolgstappen.
+exacte price-only fallback. Voor XAGUSD bestaat nu een afzonderlijke lokale
+HistData-adapter met jaarlijkse Parquetpartities en bundle-setmanifesten.
+Historische provider-release-evidence ontbreekt echter nog: modeled latency is
+daarom uitsluitend exploratory en kan geen championpromotie activeren.
+Het vooraf bevroren protocol staat in
+[docs/research_protocol_phase10.md](docs/research_protocol_phase10.md).
+Er is nog geen real-data market ablation, contextpromotie of `v0.3`-release.
 
 ### Exitcriteria
 
