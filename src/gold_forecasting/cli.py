@@ -62,7 +62,7 @@ def import_phase10_silver_context(
     from gold_forecasting.phase10.contracts import load_source
     from gold_forecasting.phase10.silver_histdata import import_histdata_silver_archives
 
-    selected_years = (2020, 2021, 2022, 2023, 2024)
+    selected_years: tuple[int, ...] = (2020, 2021, 2022, 2023, 2024)
     if years is not None:
         try:
             selected_years = tuple(
