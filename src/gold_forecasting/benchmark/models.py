@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Literal
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -178,7 +178,6 @@ def fit_model(
     validation: pd.DataFrame | None = None,
     rounds: int | None = None,
     allowed_feature_names: frozenset[str] | None = None,
-    class_weight: Literal["balanced"] | None = "balanced",
 ) -> FittedModel:
     """Fit development rows with train-only transforms and target statistics.
 
@@ -186,10 +185,6 @@ def fit_model(
     must follow training by the frozen common embargo. Fold/calibration-block
     selection remains the caller's responsibility when only train is supplied.
     """
-    if class_weight not in (None, "balanced"):
-        raise ValueError("class_weight must be None or balanced")
-    if spec.family != "logistic" and class_weight != "balanced":
-        raise ValueError("class_weight overrides are restricted to logistic challengers")
     _validate_targets(train, name="training")
     if set(train["target_class_id"].unique()) != {0, 1, 2}:
         raise ValueError("training requires nonempty coverage of all three target classes")
@@ -235,7 +230,7 @@ def fit_model(
     with threadpool_limits(limits=2):
         if spec.family in {"logistic", "reference"}:
             estimator = LogisticRegression(
-                C=spec.value, class_weight=class_weight, max_iter=1000, random_state=config.seed
+                C=spec.value, class_weight="balanced", max_iter=1000, random_state=config.seed
             )
             estimator.fit(matrix, labels)
         elif spec.family == "ridge":

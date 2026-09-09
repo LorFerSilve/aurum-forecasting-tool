@@ -153,7 +153,7 @@ Daarom:
 - dezelfde MVP price-only featurebasis als de frozen 15m Phase-7 champion;
 - silver features worden alleen aan de challenger toegevoegd;
 - logistic grid blijft `C ∈ {0.1, 1.0, 10.0}`;
-- class weights blijven `None` of `balanced`;
+- class weighting blijft exact de frozen Phase-7 instelling: `balanced`;
 - selectiecriterium blijft validation macro-F1 met log-loss tie-break;
 - preprocessing wordt uitsluitend op train gefit;
 - geen outer-teststatistiek beïnvloedt imputation, scaling, selectie of policy.

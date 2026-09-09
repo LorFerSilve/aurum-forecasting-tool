@@ -109,9 +109,9 @@ def test_actual_nested_logistic_preserves_gold_folds_and_fallback(
     table = synthetic_table()
     result = evaluate_fixture(table, tmp_path, year)
     selected = json.loads((tmp_path / "selection.json").read_text())
-    assert len(selected["candidates"]) == 6
+    assert len(selected["candidates"]) == 3
     assert {(c["spec"]["value"], c["class_weight"]) for c in selected["candidates"]} == {
-        (value, weight) for value in (0.1, 1.0, 10.0) for weight in (None, "balanced")
+        (value, "balanced") for value in (0.1, 1.0, 10.0)
     }
     assert selected["calibration_status"] == "reserved_not_fitted"
     reference = pd.read_parquet(tmp_path / "reference/outer_predictions.parquet")
@@ -231,20 +231,12 @@ def test_train_missing_source_or_missing_class_does_not_impute_a_source() -> Non
         table,
         (*PRICE_NAMES, *SILVER_MODEL_FEATURES),
         ModelSpec("logistic", 0.1),
-        "balanced",
         BenchmarkConfig(),
     )
     assert model is None and audit["model_fitted"] is False
 
 
-def test_shared_trainer_retains_phase7_balanced_default_and_supports_explicit_none() -> None:
+def test_shared_trainer_retains_frozen_phase7_balanced_weighting() -> None:
     table = synthetic_table()
-    a = fit_model(table, PRICE_NAMES, ModelSpec("logistic", 0.1), BenchmarkConfig())
-    b = fit_model(
-        table,
-        PRICE_NAMES,
-        ModelSpec("logistic", 0.1),
-        BenchmarkConfig(),
-        class_weight=None,
-    )
-    assert a.estimator.class_weight == "balanced" and b.estimator.class_weight is None
+    model = fit_model(table, PRICE_NAMES, ModelSpec("logistic", 0.1), BenchmarkConfig())
+    assert model.estimator.class_weight == "balanced"

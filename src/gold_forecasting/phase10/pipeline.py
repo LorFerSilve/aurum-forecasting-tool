@@ -150,11 +150,13 @@ def run_phase10(config_path: str | Path = "configs/phase10_silver_ablation.yaml"
         )
         if get_git_code_version(root) != record.code_version:
             raise ValueError("Git identity changed during Phase-10 evaluation")
+        # Seal while the registry still says "running".  The completion inventory
+        # deliberately excludes run.json, whose terminal status is written next.
+        complete_phase10_run(output)
     except Exception as exc:
         registry.finish_run(record, status="failed", error=f"{type(exc).__name__}: {exc}")
         raise
     registry.finish_run(record, metadata={"protocol": config.protocol_version})
-    complete_phase10_run(output)
     return output
 
 

@@ -47,7 +47,6 @@ _MODELED_FEATURES = tuple(
 )
 _PREDICTION_VALUES = [*PROBABILITY_COLUMNS, "expected_return_bps", "predicted_class"]
 _ROOT_FILES = {
-    "run.json",
     "config.yaml",
     "resolved_config.json",
     "source_config.json",
@@ -228,10 +227,10 @@ def _inventory(root: Path) -> dict[str, dict[str, Any]]:
     for path in sorted(root.rglob("*")):
         if path.is_symlink() or getattr(path, "is_junction", lambda: False)():
             raise Phase10ArtifactError("symlink/junction artifacts are forbidden")
-        if path.is_file() and path.name != "completion.json":
+        if path.is_file() and path.name not in {"completion.json", "run.json"}:
             relative = _safe_relative(path.relative_to(root).as_posix())
             result[relative] = file_digest(path, relative_to=root).model_dump(mode="json")
-        elif not path.is_dir() and path.name != "completion.json":
+        elif not path.is_dir() and path.name not in {"completion.json", "run.json"}:
             raise Phase10ArtifactError("artifact is not a regular file")
     return result
 
@@ -310,7 +309,11 @@ def _authenticated_reference(root: Path, actual: dict[str, dict[str, Any]]) -> N
                 raise Phase10ArtifactError(f"frozen Phase-7 reference digest mismatch: {local}")
 
 
-def _identity(root: Path) -> tuple[dict[str, Any], dict[str, Any]]:
+def _identity(
+    root: Path,
+    *,
+    expected_run_status: str = "succeeded",
+) -> tuple[dict[str, Any], dict[str, Any]]:
     summary, run = _json(root / "summary.json"), _json(root / "run.json")
     contract = {
         "protocol": PROTOCOL,
@@ -330,8 +333,12 @@ def _identity(root: Path) -> tuple[dict[str, Any], dict[str, Any]]:
     }
     for key, value in contract.items():
         _equal(summary.get(key), value, f"summary/{key}")
-    if run.get("status") != "succeeded" or run.get("run_id") != root.name:
-        raise Phase10ArtifactError("run must have its own identity and succeeded status")
+    if expected_run_status not in {"running", "succeeded"}:
+        raise Phase10ArtifactError("unsupported expected run status")
+    if run.get("status") != expected_run_status or run.get("run_id") != root.name:
+        raise Phase10ArtifactError(
+            f"run must have its own identity and {expected_run_status} status"
+        )
     preflight = _json(root / "preflight.json")
     if (
         preflight.get("status") != "passed"
@@ -497,10 +504,15 @@ def _fold(root: Path, table: pd.DataFrame, fold: WalkForwardFold) -> dict[str, A
     return {"split": split, "models": models, "context": context_summary(records["silver"])}
 
 
-def _validate(root: Path, inventory: dict[str, dict[str, Any]]) -> dict[str, Any]:
+def _validate(
+    root: Path,
+    inventory: dict[str, dict[str, Any]],
+    *,
+    expected_run_status: str = "succeeded",
+) -> dict[str, Any]:
     _expected_files(set(inventory))
     _authenticated_reference(root, inventory)
-    summary, _ = _identity(root)
+    summary, _ = _identity(root, expected_run_status=expected_run_status)
     table = _features(root)
     folds = {fold.name: _fold(root, table, fold) for fold in make_walk_forward_folds()}
     _equal(summary["folds"], folds, "fold summary replay")
@@ -514,7 +526,7 @@ def complete_phase10_run(directory: str | Path) -> dict[str, Any]:
     if (root / "completion.json").exists():
         raise Phase10ArtifactError("completion already exists; runs are immutable")
     inventory = _inventory(root)
-    _validate(root, inventory)
+    _validate(root, inventory, expected_run_status="running")
     files = list(inventory.values())
     payload = {"files": files, "version": content_version({"files": files})}
     write_json_atomic(root / "completion.json", payload)

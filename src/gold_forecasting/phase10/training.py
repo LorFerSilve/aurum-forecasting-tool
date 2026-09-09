@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import asdict
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any
 
 import joblib  # type: ignore[import-untyped]
 import numpy as np
@@ -146,7 +146,6 @@ def _fit_silver(
     train: pd.DataFrame,
     names: tuple[str, ...],
     spec: ModelSpec,
-    weight: Literal["balanced"] | None,
     config: BenchmarkConfig,
 ) -> tuple[FittedModel | None, dict[str, Any]]:
     usable = silver_usable_mask(train)
@@ -158,7 +157,7 @@ def _fit_silver(
         "usable_train_digest": sample_id_digest(supported["sample_id"]),
         "fit_split": "train",
         "feature_names": list(names),
-        "class_weight": weight,
+        "class_weight": "balanced",
     }
     if set(supported["target_class_id"].unique()) != {0, 1, 2}:
         audit.update(model_fitted=False, reason="insufficient_usable_train_class_support")
@@ -169,7 +168,6 @@ def _fit_silver(
         spec,
         config,
         allowed_feature_names=frozenset((*ALLOWED_FEATURE_NAMES, *SILVER_MODEL_FEATURES)),
-        class_weight=weight,
     )
     preprocessor = model.preprocessor
     audit.update(
@@ -230,39 +228,37 @@ def evaluate_silver_fold(
         inner_blocks.append((inner, inner_train, validation, reference))
     audits: list[dict[str, Any]] = []
     predictions: dict[str, list[pd.DataFrame]] = {}
-    weights: tuple[Literal["balanced"] | None, ...] = (None, "balanced")
     for spec in candidate_specs("logistic"):
-        for weight in weights:
-            candidate_name = f"{spec.name}-{weight or 'none'}"
-            scores: list[dict[str, Any]] = []
-            records = []
-            for inner, inner_train, validation, reference in inner_blocks:
-                model, evidence = _fit_silver(inner_train, names, spec, weight, config)
-                predicted = route_silver_predictions(validation, reference, model)
-                scores.append(
-                    {
-                        "inner_fold": inner.name,
-                        "metrics": _metrics(predicted),
-                        "training": evidence,
-                        "validation_rows": len(validation),
-                        "validation_sample_digest": sample_id_digest(validation["sample_id"]),
-                        "context": context_coverage(
-                            validation, predicted["used_price_only_fallback"]
-                        ),
-                    }
-                )
-                records.append(predicted)
-            audits.append(
+        candidate_name = spec.name
+        scores: list[dict[str, Any]] = []
+        records = []
+        for inner, inner_train, validation, reference in inner_blocks:
+            model, evidence = _fit_silver(inner_train, names, spec, config)
+            predicted = route_silver_predictions(validation, reference, model)
+            scores.append(
                 {
-                    "name": candidate_name,
-                    "spec": asdict(spec),
-                    "class_weight": weight,
-                    "folds": scores,
-                    "mean_macro_f1": float(np.mean([s["metrics"]["macro_f1"] for s in scores])),
-                    "mean_log_loss": float(np.mean([s["metrics"]["log_loss"] for s in scores])),
+                    "inner_fold": inner.name,
+                    "metrics": _metrics(predicted),
+                    "training": evidence,
+                    "validation_rows": len(validation),
+                    "validation_sample_digest": sample_id_digest(validation["sample_id"]),
+                    "context": context_coverage(
+                        validation, predicted["used_price_only_fallback"]
+                    ),
                 }
             )
-            predictions[candidate_name] = records
+            records.append(predicted)
+        audits.append(
+            {
+                "name": candidate_name,
+                "spec": asdict(spec),
+                "class_weight": "balanced",
+                "folds": scores,
+                "mean_macro_f1": float(np.mean([s["metrics"]["macro_f1"] for s in scores])),
+                "mean_log_loss": float(np.mean([s["metrics"]["log_loss"] for s in scores])),
+            }
+        )
+        predictions[candidate_name] = records
     selected = sorted(audits, key=lambda a: (-a["mean_macro_f1"], a["mean_log_loss"]))[0]
     selected_records = predictions[selected["name"]]
     policy, policy_audit = select_policy(selected_records, config.minimum_policy_trades)
@@ -270,7 +266,7 @@ def evaluate_silver_fold(
         "candidates": audits,
         "selected_name": selected["name"],
         "selected_spec": selected["spec"],
-        "class_weight": selected["class_weight"],
+        "class_weight": "balanced",
         "selected_policy": asdict(policy),
         "policy_candidates": policy_audit,
         "calibration_status": "reserved_not_fitted",
@@ -284,7 +280,6 @@ def evaluate_silver_fold(
         train,
         names,
         ModelSpec(**selected["spec"]),
-        selected["class_weight"],
         config,
     )
     predicted = route_silver_predictions(test, reference_records, model)
