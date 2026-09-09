@@ -12,6 +12,10 @@ from gold_forecasting.evaluation.walk_forward import make_walk_forward_folds
 from gold_forecasting.phase10.artifacts import (
     PROTOCOL,
     Phase10ArtifactError,
+    _EVALUATION_FILES,
+    _FOLD_FILES,
+    _ROOT_FILES,
+    _expected_files,
     _identity,
     _inventory,
 )
@@ -211,3 +215,38 @@ def test_identity_rejects_unknown_expected_status(tmp_path: Path) -> None:
 
     with pytest.raises(Phase10ArtifactError, match="unsupported expected run status"):
         _identity(root, expected_run_status="failed")
+
+
+def test_expected_inventory_matches_real_pipeline_outputs(tmp_path: Path) -> None:
+    root = tmp_path / "phase10-run"
+    root.mkdir()
+    config = Phase10Config()
+    _write_json(root / "resolved_config.json", config.model_dump(mode="json"))
+
+    paths = set(_ROOT_FILES)
+    paths.update(
+        {
+            "configs/project_root.yaml",
+            "configs/project_instrument.yaml",
+            "configs/project_features.yaml",
+            "configs/project_labels.yaml",
+            "configs/project_costs.yaml",
+            "configs/project_splits.yaml",
+            "configs/project_model.yaml",
+            "configs/project_backtest.yaml",
+            f"configs/{Path(config.features_config).name}",
+            f"configs/{Path(config.source_config).name}",
+            f"configs/{Path(config.phase7_champion_config).name}",
+            "source_snapshot/gold_forecasting/example.py",
+        }
+    )
+    for year in (2022, 2023, 2024):
+        prefix = f"folds/test_{year}/"
+        paths.update(prefix + name for name in _FOLD_FILES)
+        for variant in ("reference", "silver"):
+            paths.update(prefix + variant + "/" + name for name in _EVALUATION_FILES)
+
+    _expected_files(root, paths)
+
+    with pytest.raises(Phase10ArtifactError, match="artifact inventory differs"):
+        _expected_files(root, paths | {"unexpected.txt"})
