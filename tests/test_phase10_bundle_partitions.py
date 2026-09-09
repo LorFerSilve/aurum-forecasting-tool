@@ -192,5 +192,5 @@ def test_bundle_format_must_match_file_suffix(tmp_path: Path) -> None:
         ),
         encoding="utf-8",
     )
-    with pytest.raises(ValueError, match="requires a .parquet file"):
+    with pytest.raises(ValueError, match=r"requires a \\.parquet file"):
         load_context_bundle(path, _source())
