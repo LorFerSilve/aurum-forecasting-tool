@@ -9,13 +9,13 @@ from pathlib import Path
 import pytest
 
 from gold_forecasting.evaluation.walk_forward import make_walk_forward_folds
-from gold_forecasting.phase10.config import Phase10Config
 from gold_forecasting.phase10.artifacts import (
     PROTOCOL,
     Phase10ArtifactError,
     _identity,
     _inventory,
 )
+from gold_forecasting.phase10.config import Phase10Config
 from gold_forecasting.phase10.reference import (
     PHASE7_REFERENCE_COMPLETION,
     PHASE7_REFERENCE_RUN,
@@ -76,15 +76,27 @@ def _identity_fixture(root: Path, *, status: str) -> None:
         "\n".join(
             [
                 "source_id: silver",
-                "description: HistData XAGUSD M1 exploratory source with modeled historical availability",
-                "source_url: https://www.histdata.com/f-a-q/data-files-detailed-specification/",
-                "market_hours: OTC vendor quote stream; gaps and market closures stay missing/stale",
+                (
+                    "description: HistData XAGUSD M1 exploratory source with modeled "
+                    "historical availability"
+                ),
+                (
+                    "source_url: "
+                    "https://www.histdata.com/f-a-q/data-files-detailed-specification/"
+                ),
+                (
+                    "market_hours: OTC vendor quote stream; gaps and market closures "
+                    "stay missing/stale"
+                ),
                 "source_timezone: Fixed UTC-05:00 without daylight saving time",
                 "publication_delay_seconds: 60",
                 "stale_after_seconds: 600",
                 "availability_basis: modeled_latency",
                 "revision_policy: append_only",
-                "availability_evidence: Exploratory only. HistData does not provide historical per-row release timestamps.",
+                (
+                    "availability_evidence: Exploratory only. HistData does not provide "
+                    "historical per-row release timestamps."
+                ),
                 "missing_policy: price_only_fallback",
                 "enabled: true",
                 "",
