@@ -15,6 +15,7 @@ from gold_forecasting.phase10.artifacts import (
     _ROOT_FILES,
     PROTOCOL,
     Phase10ArtifactError,
+    _equal,
     _expected_files,
     _identity,
     _inventory,
@@ -250,3 +251,24 @@ def test_expected_inventory_matches_real_pipeline_outputs(tmp_path: Path) -> Non
 
     with pytest.raises(Phase10ArtifactError, match="artifact inventory differs"):
         _expected_files(root, paths | {"unexpected.txt"})
+
+
+
+def test_json_list_and_replayed_tuple_are_semantically_equal() -> None:
+    _equal(
+        [[10, 2, 1], [3, 20, 4], [0, 5, 30]],
+        ((10, 2, 1), (3, 20, 4), (0, 5, 30)),
+        "confusion_matrix",
+    )
+
+
+def test_json_sequence_replay_still_rejects_changed_value() -> None:
+    with pytest.raises(
+        Phase10ArtifactError,
+        match=r"confusion_matrix/1/2: value differs",
+    ):
+        _equal(
+            [[10, 2, 1], [3, 20, 999], [0, 5, 30]],
+            ((10, 2, 1), (3, 20, 4), (0, 5, 30)),
+            "confusion_matrix",
+        )

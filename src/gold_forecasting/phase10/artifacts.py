@@ -126,8 +126,8 @@ def _equal(actual: Any, expected: Any, context: str) -> None:
             raise Phase10ArtifactError(f"{context}: object keys differ")
         for key, value in expected.items():
             _equal(actual[key], value, f"{context}/{key}")
-    elif isinstance(expected, list):
-        if not isinstance(actual, list) or len(actual) != len(expected):
+    elif isinstance(expected, (list, tuple)):
+        if not isinstance(actual, (list, tuple)) or len(actual) != len(expected):
             raise Phase10ArtifactError(f"{context}: sequence differs")
         for index, (left, right) in enumerate(zip(actual, expected, strict=True)):
             _equal(left, right, f"{context}/{index}")

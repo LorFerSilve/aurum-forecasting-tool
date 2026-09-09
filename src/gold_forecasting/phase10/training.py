@@ -191,7 +191,7 @@ def evaluate_silver_fold(
     reference_policy: DecisionPolicy,
     directory: Path,
 ) -> dict[str, Any]:
-    """Select the six protocol candidates and policy on complete inner universes."""
+    """Select the three frozen logistic candidates and policy on complete inner universes."""
     validate_development_frame(table)
     schedule = {item.name: item for item in make_walk_forward_folds()}
     if fold.name not in schedule or fold != schedule[fold.name]:
