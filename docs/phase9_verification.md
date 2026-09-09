@@ -29,6 +29,15 @@ gesorteerde JSON-keyvolgorde ten onrechte als inhoudelijk configverschil werd be
 Die wijziging verandert geen model, data, weights, labels, folds, losses, seeds, predictions
 of benchmarkresultaten en vereist daarom geen nieuwe marktbenchmark.
 
+Tijdens de pre-merge review is daarnaast vastgesteld dat de oorspronkelijk gerapporteerde
+`cumulative_15m_return_mae_bps` uit de directe aggregate head kwam in plaats van uit het
+gereconstrueerde vijf-candle q50-pad. De modeloutputs zelf waren correct en volledig
+opgeslagen. Daarom is de metric zonder retraining opnieuw berekend uit de geverifieerde
+`path_quantiles.parquet`-artifacts op exact dezelfde sample IDs. De audit gebruikte de
+canonieke completion
+`sha256:a39fb334233a27c5fea65d1f4269ce3134f24bf9d89c2530b8998f5465a0a776`,
+opende de holdout niet en voerde geen training uit.
+
 ## Hoofdvergelijking
 
 Lagere Brier, log loss en MAE zijn beter; hogere macro-F1 is beter.
@@ -85,10 +94,12 @@ Direct heeft:
 - duidelijk betere path-vs-direct range-consistency:
   **0.919 vs 1.263 bps**.
 
-Recursive heeft een vrijwel identieke Brier/log-loss en een minimaal lagere gemiddelde
-per-step median-MAE, maar dit voordeel is te klein om de slechtere directionele en
-geometrische resultaten te compenseren. Er is geen empirische reden om recursive als
-standaardarchitectuur mee te nemen.
+Recursive heeft een vrijwel identieke Brier/log-loss, een minimaal lagere gemiddelde
+per-step median-MAE en na de post-benchmark audit ook een iets betere echte cumulative
+five-step path-return MAE (**6.001428 vs 6.007010 bps**). Dat voordeel is echter klein en
+weegt niet op tegen de slechtere directionele macro-F1, aggregate high/low/range-fout,
+coverage en path-vs-direct consistency. Er is daarom nog steeds geen empirische reden om
+recursive als standaardarchitectuur mee te nemen.
 
 ## Distributionele pathkwaliteit
 
@@ -119,7 +130,7 @@ Directe q50 path-reconstructie geeft gemiddeld:
 - aggregate low-MAE: **5.025 bps**;
 - aggregate close-MAE: **6.007 bps**;
 - aggregate range-MAE: **9.002 bps**;
-- cumulative 15m return-MAE: **6.005 bps**.
+- corrected cumulative five-step 15m return-MAE: **6.007010 bps**.
 
 De path- en directe 15m-head blijven onderling redelijk coherent:
 
@@ -135,6 +146,28 @@ Maar de q50 path zelf is geen sterke directionele classifier:
 
 De path-output moet daarom niet als vervanging van de bestaande direction-head worden
 gebruikt.
+
+
+## Post-benchmark path-return audit
+
+De gecorrigeerde cumulative five-step q50 path-return MAE is rechtstreeks uit de
+persisted pathquantielen berekend:
+
+| Fold | Direct bps | Recursive bps |
+|---|---:|---:|
+| 2022 | 6.627445 | 6.624825 |
+| 2023 | 5.147704 | 5.141810 |
+| 2024 | 6.245882 | 6.237647 |
+| **Mean** | **6.007010** | **6.001428** |
+| **Worst** | **6.627445** | **6.624825** |
+
+De correctie ten opzichte van de eerder opgeslagen aggregate-head metric is klein:
+direct verandert per fold met ongeveer +0.00234 / +0.00301 / +0.00190 bps; recursive
+met -0.00683 / -0.00394 / -0.00143 bps. De audit verandert daarom geen champion- of
+economisch promotiebesluit.
+
+Het auditrapport staat in
+`reports/phase9_path_return_audit_20260908T211301827616Z-ad6b573c.json`.
 
 ## Economische uitkomst
 

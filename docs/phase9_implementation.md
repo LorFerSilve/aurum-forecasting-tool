@@ -79,6 +79,13 @@ Na de benchmark is in commit `991f5c3` uitsluitend de persisted-configvalidator
 gecorrigeerd voor JSON-keyvolgorde. Dit verandert de benchmarkmethodologie of resultaten
 niet en vereist geen nieuwe marktbenchmark.
 
+Tijdens de pre-merge review is ook de cumulative path-return evaluatie gecorrigeerd:
+de metric gebruikt nu het gereconstrueerde vijf-candle q50-pad in plaats van de directe
+aggregate head. De bestaande canonical run hoefde niet opnieuw getraind te worden, omdat
+alle benodigde pathquantielen al cryptografisch geverifieerd waren opgeslagen. De
+post-benchmark audit geeft mean MAE **6.007010 bps** voor direct en **6.001428 bps** voor
+recursive. Dit wijzigt het Phase-9 promotiebesluit niet.
+
 PR #3 kan na groene CI uit draft worden gehaald, maar mag pas na de gebruikelijke
 branch-protection/mergecontrole in `main` worden gemerged.
 
