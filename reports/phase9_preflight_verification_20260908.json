@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "phase": 9,
+  "protocol": "phase9-v1",
+  "decision": "canonical_preflight_passed_formal_runner_may_be_opened",
+  "verified_on": "2026-09-08",
+  "source_report": "reports/phase9_preflight.json",
+  "source_code_version": "6e466053f3e64aaad1f71b951b6d7a8cb008bda6",
+  "holdout_opened": false,
+  "formal_run_opened": false,
+  "data_version": "sha256:41c618e346b7be3aed05ffdac634076f0dde422387ecdf9529b0c6702d0ebbfc",
+  "dataset": {
+    "candidate_rows": 534698,
+    "standard_15m_eligible": 526005,
+    "path_eligible": 527349,
+    "common_eligible": 525967,
+    "dropped_from_common": 8731,
+    "sample_digest": "sha256:2fcf870f8ae0e8a2d6a2a6361538f129cdb2141ac5c4b6378ff431e4b9a55dc7",
+    "path_timing": "[t,t+15min]",
+    "execution_label_timing": "[t+1min,t+16min]"
+  },
+  "references": {
+    "phase7": {
+      "run_id": "20260907T014255645674Z-b2afe281",
+      "code_version": "3f0a703568224fe9169b1e9f8d61dad131f0005b",
+      "completion_version": "sha256:beac58092d06350bb067fbd2df144bb9cb2507f45053c19487474c87d0ceca0f"
+    },
+    "phase8": {
+      "run_id": "20260908T020044407464Z-24f4c0d4",
+      "code_version": "75945fe70606c8200cebc66678d0e220db5fb0ad",
+      "completion_version": "sha256:9bce4a80c7e0d65fc40ccd4e1fea3c1ef2d56022f8b60720f3d1a8b54cfbb922"
+    }
+  },
+  "folds": {
+    "test_2022": {
+      "train_rows": 192923,
+      "calibration_rows": 27961,
+      "test_rows": 110936,
+      "gap_minutes": 181,
+      "test_digest": "sha256:0db8fb5bad419a97b2536a85768ed5ec031b0c4f6b5966a44bbfa2eadaa4c987"
+    },
+    "test_2023": {
+      "train_rows": 304569,
+      "calibration_rows": 27251,
+      "test_rows": 83039,
+      "gap_minutes": 181,
+      "test_digest": "sha256:0baae4e10f6e7ff14f32b53fa9b6108880d9ba68d54e938ab7387375f0c3ef3a"
+    },
+    "test_2024": {
+      "train_rows": 387659,
+      "calibration_rows": 27215,
+      "test_rows": 111093,
+      "gap_minutes": 181,
+      "test_digest": "sha256:4cdfea7c36d77de1655ffd4728efce638f00c869846420656046fb7a018008ff"
+    }
+  },
+  "sequence_coverage": {
+    "1min": 1,
+    "3min": 1,
+    "15min": 0.9349655016379355
+  },
+  "runtime": {
+    "device": "cuda",
+    "cuda_available": true,
+    "cuda_device_name": "NVIDIA GeForce RTX 3080",
+    "cuda_version": "12.8",
+    "torch": "2.11.0+cu128",
+    "deterministic_algorithms": true,
+    "cublas_workspace_config": ":4096:8"
+  },
+  "runtime_smoke": {
+    "status": "passed",
+    "direct": {
+      "fit_rows": 512,
+      "prediction_rows": 128,
+      "parameter_count": 17617,
+      "optimizer_steps": 1,
+      "amp_skipped_steps": 0
+    },
+    "recursive": {
+      "fit_rows": 512,
+      "prediction_rows": 128,
+      "parameter_count": 20737,
+      "optimizer_steps": 1,
+      "amp_skipped_steps": 0
+    }
+  },
+  "conclusion": "All pre-benchmark guards passed. A formal run may be exposed only if it reruns the preflight and preserves exact code/data/reference/fold/sample parity before RunRegistry.start_run()."
+}

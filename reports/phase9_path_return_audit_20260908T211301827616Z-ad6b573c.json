@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "protocol": "phase9-v1-path-return-audit-v1",
+  "source_run_id": "20260908T211301827616Z-ad6b573c",
+  "source_completion_version": "sha256:a39fb334233a27c5fea65d1f4269ce3134f24bf9d89c2530b8998f5465a0a776",
+  "source_verified_files": 225,
+  "holdout_opened": false,
+  "retraining_performed": false,
+  "method": "sum clipped q50 gap/body log-bps across the persisted five-step path; compare with path_15m_close_return_log_bps on exact persisted sample IDs",
+  "folds": {
+    "test_2022": {
+      "direct": {
+        "rows": 110936,
+        "recorded_aggregate_head_mae_bps": 6.6251040505253,
+        "corrected_path_return_mae_bps": 6.627444538961986,
+        "correction_delta_bps": 0.0023404884366859946
+      },
+      "recursive": {
+        "rows": 110936,
+        "recorded_aggregate_head_mae_bps": 6.631652446073284,
+        "corrected_path_return_mae_bps": 6.624825266031899,
+        "correction_delta_bps": -0.006827180041384828
+      }
+    },
+    "test_2023": {
+      "direct": {
+        "rows": 83039,
+        "recorded_aggregate_head_mae_bps": 5.144693295798426,
+        "corrected_path_return_mae_bps": 5.147703960789868,
+        "correction_delta_bps": 0.0030106649914420913
+      },
+      "recursive": {
+        "rows": 83039,
+        "recorded_aggregate_head_mae_bps": 5.145754332495254,
+        "corrected_path_return_mae_bps": 5.141810085689177,
+        "correction_delta_bps": -0.0039442468060766345
+      }
+    },
+    "test_2024": {
+      "direct": {
+        "rows": 111093,
+        "recorded_aggregate_head_mae_bps": 6.24397981380286,
+        "corrected_path_return_mae_bps": 6.2458818179353335,
+        "correction_delta_bps": 0.0019020041324733228
+      },
+      "recursive": {
+        "rows": 111093,
+        "recorded_aggregate_head_mae_bps": 6.239078114771269,
+        "corrected_path_return_mae_bps": 6.237647385663244,
+        "correction_delta_bps": -0.0014307291080246642
+      }
+    }
+  },
+  "aggregate": {
+    "direct": {
+      "folds": [
+        6.627444538961986,
+        5.147703960789868,
+        6.2458818179353335
+      ],
+      "mean": 6.00701010589573,
+      "median": 6.2458818179353335,
+      "worst": 6.627444538961986
+    },
+    "recursive": {
+      "folds": [
+        6.624825266031899,
+        5.141810085689177,
+        6.237647385663244
+      ],
+      "mean": 6.001427579128108,
+      "median": 6.237647385663244,
+      "worst": 6.624825266031899
+    }
+  }
+}

@@ -26,10 +26,11 @@ Daarna vervangen of versterken we telkens één onderdeel. Na iedere fase blijft
 | Onderdeel | Huidige status |
 |---|---|
 | Systeemontwerp | Afgerond in `project_idea.md` |
-| Roadmap | Fasen 0–7 geverifieerd; fase 8 is de eerstvolgende ontwikkelfase |
-| Implementatie | `v0.2` researchbenchmark met geharde data, fase-6 evaluatiekader en geverifieerde fase-7 featureselectie |
+| Roadmap | Fasen 0–9 geverifieerd; fase 10 is de volgende ontwikkelfase |
+| Implementatie | `v0.2.0` blijft champion; Phase-9 direct path is alleen research/distributionele output |
 | Huidige release | `v0.2.0` — betrouwbare price-only researchbenchmark |
-| Eerstvolgende stap | Fase 8: compact multi-timeframe neuraal kernmodel |
+| Eerstvolgende stap | Phase 9 branch afronden/mergen en daarna fase 10 openen |
+| Monte Carlo | Voorstel geaccepteerd; predictive MC in fase 12 na OOF/calibratie, strategy MC in fase 13 |
 | Standaard einddoel | Professioneel paper-trading-systeem |
 | Echte orders | Afzonderlijke, optionele laatste fase |
 
@@ -157,8 +158,8 @@ Er geldt voor `v0.1` nog geen eis dat het model de markt verslaat. Een negatieve
 | `v0.1` | 1–4 | End-to-end research-MVP |
 | `v0.2` | 5–7 | Betrouwbare multi-timeframe price-only benchmark |
 | `v0.3` | 8–10 | Geavanceerd model met neural core, future path en geteste context |
-| `v0.4` | 11–12 | Gekalibreerd en selectief beslissingssysteem |
-| `v1.0-rc` | 13 | Bevroren kandidaat na tuning en stresstests |
+| `v0.4` | 11–12 | Gekalibreerd, selectief beslissingssysteem met gevalideerde predictive Monte Carlo-challenger |
+| `v1.0-rc` | 13 | Bevroren kandidaat na tuning, ablations, strategy Monte Carlo en stresstests |
 | `v1.0` | 14 | Onafhankelijk gevalideerd research-algoritme |
 | `v1.1` | 15–16 | Professioneel beheerd paper-trading-systeem |
 | `v2.0` | 17 | Optionele echte uitvoering met externe risicomotor |
@@ -187,11 +188,11 @@ flowchart TD
     P9 --> P10[Fase 10: externe context en events]
     P10 --> M3[[v0.3: geavanceerde predictor]]
 
-    M3 --> P11[Fase 11: OOF en calibratie]
-    P11 --> P12[Fase 12: ensemble, meta en OOD]
-    P12 --> M4[[v0.4: selectief beslissingssysteem]]
+    M3 --> P11[Fase 11: OOF en distributionele calibratie]
+    P11 --> P12[Fase 12: ensemble, meta, OOD en predictive Monte Carlo]
+    P12 --> M4[[v0.4: gekalibreerd selectief beslissingssysteem]]
 
-    M4 --> P13[Fase 13: tuning, ablations en stress]
+    M4 --> P13[Fase 13: tuning, ablations, strategy Monte Carlo en stress]
     P13 --> P14[Fase 14: finale holdout]
     P14 -->|geslaagd| M5[[v1.0: gevalideerd algoritme]]
     P14 -->|niet geslaagd| R[Terug naar ontwikkeling met nieuwe toekomstige holdout]
@@ -974,9 +975,12 @@ Zie [het formele Phase-8 verificatierapport](docs/phase8_verification.md).
 
 ## Fase 9 — Directe future-candle-path van vijf 3min-candles
 
+**Status:** ✅ technisch en empirisch afgerond  
+**Canonieke run:** `20260908T211301827616Z-ad6b573c`  
+**Besluit:** `keep_phase7_champion_retain_direct_path_research_only`  
 **Inspanning:** L  
 **Release:** onderdeel van `v0.3`  
-**Afhankelijkheden:** fase 8
+**Afhankelijkheden:** fase 8 ✅ — canonieke reference `20260908T020044407464Z-24f4c0d4`
 
 ### Doel
 
@@ -990,37 +994,38 @@ Een recursieve one-stepvariant mag als baseline worden gebouwd, maar niet automa
 
 ### Targetrepresentatie
 
-- [ ] Voorspel per stap gap ten opzichte van vorige close.
-- [ ] Voorspel body.
-- [ ] Voorspel upper wick als niet-negatieve waarde.
-- [ ] Voorspel lower wick als niet-negatieve waarde.
-- [ ] Reconstrueer geldige OHLC-candles.
-- [ ] Voeg quantielen of een passende kansverdeling toe.
-- [ ] Bewaar de echte vijf-candle-path als label.
-- [ ] Voeg rechtstreeks een 15min return/candle-head toe.
+- [x] Voorspel per stap gap ten opzichte van vorige close.
+- [x] Voorspel body.
+- [x] Voorspel upper wick als niet-negatieve waarde.
+- [x] Voorspel lower wick als niet-negatieve waarde.
+- [x] Reconstrueer geldige OHLC-candles.
+- [x] Voeg quantielen of een passende kansverdeling toe.
+- [x] Bewaar de echte vijf-candle-path als label.
+- [x] Voeg rechtstreeks een 15min return/candle-head toe.
 
 ### Losses
 
-- [ ] Path loss per stap.
-- [ ] Cumulatieve return loss.
-- [ ] Direction loss.
-- [ ] Range/volatility loss.
-- [ ] Temporal consistency loss tussen vijf 3min-candles en de directe 15min-head.
-- [ ] Huber of robuuste alternatieven voor uitbijters.
-- [ ] Genormaliseerde lossgewichten en gradient clipping.
+- [x] Path loss per stap.
+- [x] Cumulatieve return loss.
+- [x] Direction loss.
+- [x] Range/volatility loss.
+- [x] Temporal consistency loss tussen vijf 3min-candles en de directe 15min-head.
+- [x] Huber of robuuste alternatieven voor uitbijters.
+- [x] Genormaliseerde lossgewichten en gradient clipping.
 
 Meer fouten produceren dus meer leersignaal, maar we maken backpropagation niet “strenger” door onbeperkt grote updates toe te laten. Sneller leren moet voortkomen uit rijkere, goed geschaalde supervision en meerdere samenhangende targets, niet uit instabiele gradients.
 
 ### Evaluatie
 
-- [ ] Fout per voorspelde stap.
-- [ ] Cumulatieve 15min returnfout.
-- [ ] Direction accuracy van het geaggregeerde pad.
-- [ ] High/low/range coverage.
-- [ ] Quantile coverage en intervalbreedte.
-- [ ] Consistency tussen het pad en de directe 15min-head.
-- [ ] Vergelijk direct multi-step met recursief one-step.
-- [ ] Meet of de path-head de uiteindelijke direction, calibration of nettoresultaten verbetert.
+- [x] Fout per voorspelde stap.
+- [x] Cumulatieve 15min returnfout.
+- [x] Direction accuracy/macro-F1 van het geaggregeerde q50-pad.
+- [ ] High/low/range coverage als afgeleide fysieke quantielen; niet fabriceren uit niet-joint componentquantielen.
+- [x] High/low/range-fout van het geaggregeerde q50-pad.
+- [x] Quantile coverage en intervalbreedte.
+- [x] Consistency tussen het pad en de directe 15min-head.
+- [x] Vergelijk direct multi-step met recursief one-step.
+- [x] Meet in de formele benchmark of de path-head de uiteindelijke direction, calibration of nettoresultaten verbetert.
 
 ### Promotiebesluit
 
@@ -1034,11 +1039,36 @@ De path-head blijft in de champion wanneer hij over meerdere folds:
 
 Anders blijft direction/return de champion en wordt future path een optionele onderzoeksoutput.
 
+### Empirische uitkomst
+
+- Phase-9 direct mean macro-F1: **0,321661**; frozen Phase 7: **0,425044**.
+- Direct verbetert slechts marginaal versus Phase 8 op mean macro-F1 (+0,002397),
+  terwijl worst-fold macro-F1 verslechtert (-0,003099).
+- Direct q10-q90 coverage ligt dicht bij nominaal: **78,92%** per pathcomponent en
+  **79,75%** voor aggregate componenten.
+- Direct is geometrisch/coherent sterker dan recursive en blijft daarom de enige
+  pathvariant die als researchoutput wordt bewaard.
+- Alle Phase-9 policies blijven cash/no-trade: 0 trades, 0 exposure, geen economic promotion.
+- Fysieke high/low/range intervalcoverage blijft bewust ongeclaimd totdat een joint
+  distributionele methode in latere fasen beschikbaar is.
+
 ### Exitcriteria
 
-- Alle gereconstrueerde candles voldoen aan OHLC-invarianten.
-- De vijf timestamps en aggregatie naar 15 minuten zijn correct.
-- Het nut of gebrek aan nut van future-path learning is eerlijk aangetoond.
+- [x] Alle gereconstrueerde candles voldoen aan OHLC-invarianten.
+- [x] De vijf timestamps en aggregatie naar 15 minuten zijn correct.
+- [x] Het nut en de beperkingen van future-path learning zijn eerlijk aangetoond.
+- [x] Championbesluit is vastgelegd: Phase 7 blijft actief; direct path is research-only.
+- [x] Finale 2025+ holdout bleef gesloten.
+
+Zie [het Phase-9 verificatierapport](docs/phase9_verification.md).
+
+### Monte Carlo-handoff
+
+Het Monte Carlo-voorstel is geaccepteerd, maar verandert de bevroren `phase9-v1`-scope niet.
+De q10/q50/q90 path- en aggregate-heads vormen de distributionele precursor. Nieuwe samplers,
+residual-distributions, Monte Carlo policies en economische thresholds worden pas na OOF-data
+en calibratie in fase 11–13 ontwikkeld. Zo kan de Phase-9 benchmark niet achteraf worden
+aangepast om de latere Monte Carlo-laag gunstiger te maken.
 
 ---
 
@@ -1102,7 +1132,7 @@ Nieuws-NLP, social sentiment en brede alternatieve datasets blijven uitgesteld. 
 
 ---
 
-## Fase 11 — Out-of-foldvoorspellingen en kanskalibratie
+## Fase 11 — Out-of-foldvoorspellingen en probability/distribution calibratie
 
 **Inspanning:** L  
 **Release:** onderdeel van `v0.4`  
@@ -1110,7 +1140,7 @@ Nieuws-NLP, social sentiment en brede alternatieve datasets blijven uitgesteld. 
 
 ### Doel
 
-Van ruwe modelscores betrouwbare, op ongeziene data getrainde kansen maken en een veilige basis leggen voor ensemble en meta-labeling.
+Van ruwe modelscores betrouwbare, op ongeziene data getrainde kansen én continue/path distributions maken en daarmee een veilige basis leggen voor ensemble, meta-labeling en predictive Monte Carlo.
 
 ### OOF-store
 
@@ -1119,7 +1149,10 @@ Van ruwe modelscores betrouwbare, op ongeziene data getrainde kansen maken en ee
 - [ ] Herhaal tot ieder toegestaan ontwikkelrecord maximaal één echte OOF-voorspelling heeft.
 - [ ] Bewaar model-, data-, feature-, fold- en horizonversie.
 - [ ] Bewaar voorspelde kansen, continue outputs en gerealiseerde labels.
+- [ ] Bewaar Phase-9 path-/aggregate-quantielen of andere distributionele parameters en het gerealiseerde future path.
+- [ ] Bewaar predicted range/volatility, realized return/path en base/stress kostencontext.
 - [ ] Bewaar ook regime, eventfase en kostencontext.
+- [ ] Bewaar expliciete model-, calibrator-, distribution- en sample-universeversies.
 
 Voor ieder OOF-record geldt:
 
@@ -1137,6 +1170,24 @@ training_end < prediction_time <= oof_block_end
 - [ ] Controleer reliability per horizon, regime en eventfase.
 - [ ] Versioneer calibrator samen met het model.
 - [ ] Definieer gedrag wanneer een probabilitybucket onvoldoende observaties heeft.
+- [ ] Kalibreer continue/path distributions uitsluitend met OOF/calibrationdata.
+- [ ] Vergelijk minimaal empirical OOF residuals met een robuuste eenvoudige parametrische kandidaat, zoals Student-t wanneer de OOF-scores dat ondersteunen.
+- [ ] Rapporteer PIT/coverage, interval width/sharpness, tail coverage en een passende proper score zoals CRPS.
+- [ ] Conditioneer residuals hoogstens grof op horizon/volatiliteitsregime en gebruik expliciete shrink/fallbacks bij te kleine buckets.
+- [ ] Promoveer geen distributiefamilie omdat ze complexer is; de eenvoudigste goed gekalibreerde variant blijft de voorkeur.
+
+### Monte Carlo-prerequisite
+
+Predictive Monte Carlo mag pas economische evidence produceren wanneer:
+
+- iedere sampler-input OOF of uit een bevroren calibratieblok komt;
+- de gebruikte distribution/calibrator-versie reproduceerbaar is;
+- interval- en tail-calibratie voldoende empirisch zijn gecontroleerd;
+- geen observation na `prediction_time_utc` samplerparameters beïnvloedt;
+- de finale holdout niet is gebruikt.
+
+Een Gaussian rond een point forecast mag hoogstens als sanity-check dienen en wordt niet
+automatisch de standaarddistributie voor XAU/USD.
 
 ### Confidence-contract
 
@@ -1151,11 +1202,13 @@ Vanaf deze fase mag een percentage als gekalibreerde modelconfidence worden geto
 
 - Geen OOF-record is in-sample.
 - Gekalibreerde kansen zijn op ongeziene perioden betrouwbaarder dan ruwe scores.
+- De gekozen continue/path distribution heeft aantoonbare OOF coverage/tail-evidence en een bevroren versie.
+- Predictive Monte Carlo heeft een leakage-vrije, reproduceerbare inputbasis maar is nog geen automatisch gepromoveerde policy.
 - Kalibratie wordt niet behouden wanneer zij buiten haar fitperiode instabieler maakt.
 
 ---
 
-## Fase 12 — Ensemble, meta-labeler, OOD-guard en beslispolicy
+## Fase 12 — Ensemble, meta-labeler, OOD-guard, predictive Monte Carlo en beslispolicy
 
 **Inspanning:** L–XL  
 **Release:** `v0.4 — selectief beslissingssysteem`  
@@ -1163,7 +1216,7 @@ Vanaf deze fase mag een percentage als gekalibreerde modelconfidence worden geto
 
 ### Doel
 
-Niet alleen voorspellen, maar bepalen wanneer het systeem genoeg bewijs heeft om een signaal te geven en wanneer het zich moet onthouden.
+Niet alleen voorspellen, maar bepalen wanneer het systeem genoeg bewijs heeft om een signaal te geven en wanneer het zich moet onthouden. Predictive Monte Carlo wordt hier als expliciete challenger gebruikt om gekalibreerde forecast-onzekerheid, downside en netto-rendement na kosten in de beslissing mee te nemen.
 
 ### Compact ensemble
 
@@ -1193,9 +1246,21 @@ Niet alleen voorspellen, maar bepalen wanneer het systeem genoeg bewijs heeft om
 - [ ] Classificeer input als `in_distribution`, `borderline` of `out_of_distribution`.
 - [ ] Log iedere blokkering met reden.
 
+### Predictive Monte Carlo
+
+- [ ] Implementeer een versioned sampler bovenop de in fase 11 gekozen gekalibreerde predictive distribution.
+- [ ] Gebruik per formele vergelijking vaste seeds en waar mogelijk common random numbers voor baseline/challenger-pariteit.
+- [ ] Rapporteer minimaal `p_net_positive_base`, `p_net_positive_stress`, expected net return, q05/q50/q95 en expected shortfall/CVaR.
+- [ ] Bewaar predictive interval width, distribution-versie, calibrator-versie, draw count en seed.
+- [ ] Voeg path-afhankelijke MFE/MAE en TP-before-SL/SL-before-TP alleen toe nadat de intrapath executionsemantiek formeel ondubbelzinnig is.
+- [ ] Test samplerconvergentie met vooraf gekozen draw-budgetten, bijvoorbeeld 1.024, 4.096 en 16.384.
+- [ ] Laat Monte Carlo nooit predictive edge “creëren”: het is een uncertainty/selection layer bovenop een reeds geëvalueerde predictor.
+- [ ] Voeg de MC-summary eerst als extra kolommen aan dezelfde backtestrecords toe zodat de bestaande execution engine onveranderd baseline en challenger kan vergelijken.
+- [ ] De cash/no-trade fallback blijft verplicht.
+
 ### Decision policy
 
-- [ ] Combineer direction probabilities, verwacht rendement, geschatte kosten, meta-score en OOD-status.
+- [ ] Combineer direction probabilities, verwacht rendement, geschatte kosten, meta-score, OOD-status en — voor de MC-challenger — gekalibreerde Monte Carlo risk/economic evidence.
 - [ ] Ondersteun long, short en geen signaal.
 - [ ] Versioneer thresholds en policy.
 - [ ] Tune thresholds uitsluitend binnen ontwikkelingsfolds.
@@ -1207,11 +1272,12 @@ Niet alleen voorspellen, maar bepalen wanneer het systeem genoeg bewijs heeft om
 - Het ensemble evenaart of verslaat stabiel het beste individuele model.
 - De meta-labeler voegt waarde toe bij vooraf aanvaardbare coverage.
 - OOD- en no-signalbeslissingen zijn volledig auditbaar.
-- Als ensemble of meta-labeler faalt, blijft de eenvoudigere gekalibreerde champion actief.
+- De predictive Monte Carlo-policy wordt alleen behouden wanneer zij op dezelfde OOF/fold-universe aantoonbaar betere of robuustere selectiviteit levert zonder onaanvaardbare coverage- of worst-foldregressie.
+- Als ensemble, meta-labeler of Monte Carlo faalt, blijft de eenvoudigere gekalibreerde champion actief.
 
 ---
 
-## Fase 13 — Begrensde tuning, ablations en stresstests
+## Fase 13 — Begrensde tuning, ablations, strategy Monte Carlo en stresstests
 
 **Inspanning:** XL  
 **Release:** `v1.0-rc`  
@@ -1219,7 +1285,7 @@ Niet alleen voorspellen, maar bepalen wanneer het systeem genoeg bewijs heeft om
 
 ### Doel
 
-Eén kandidaat voor finale evaluatie kiezen zonder de onaangeraakte holdout te gebruiken.
+Eén kandidaat voor finale evaluatie kiezen zonder de onaangeraakte holdout te gebruiken, inclusief een distributionele robuustheidstest van de volledige decision/execution-keten.
 
 ### Gecontroleerde tuning
 
@@ -1241,6 +1307,7 @@ Eén kandidaat voor finale evaluatie kiezen zonder de onaangeraakte holdout te g
 - [ ] Zonder iedere externe contextbron afzonderlijk.
 - [ ] Zonder ensemble.
 - [ ] Zonder meta-labeler.
+- [ ] Zonder predictive Monte Carlo evidence in de decision policy.
 - [ ] Zonder recency weighting.
 
 ### Trainingsvensters
@@ -1249,6 +1316,17 @@ Eén kandidaat voor finale evaluatie kiezen zonder de onaangeraakte holdout te g
 - [ ] Rolling window.
 - [ ] Recency-weighted expanding window.
 - [ ] Vergelijk oude, recente en schokregimes.
+
+### Strategy Monte Carlo
+
+- [ ] Gebruik moving-block of stationary bootstrap op chronologische OOF/development prediction- of decisionrecords.
+- [ ] Behoud de volgorde binnen ieder block zodat autocorrelatie, volatility clustering en verliesreeksen niet kunstmatig verdwijnen.
+- [ ] Voer op ieder geresampled scenario opnieuw dezelfde backtester en no-overlap/executionregels uit; shuffle niet simpelweg individuele finale trade returns.
+- [ ] Rapporteer per scenario cumulative net bps, mean net bps/trade, realized-exit drawdown, profit factor, hit rate, trade count, coverage en exposure.
+- [ ] Rapporteer over alle scenario's median, p05/p25/p75/p95, probability of negative aggregate result en expected shortfall.
+- [ ] Test sensitiviteit voor block length, seed en base versus stress costs.
+- [ ] Noem deze analyse geen account risk-of-ruin zolang er geen formeel compounded account/position-sizingmodel bestaat.
+- [ ] Bewaar samplerconfig, RNG-seed, OOF-store hash, policyversie en convergence diagnostics; volledige ruwe draws zijn alleen vereist voor geselecteerde auditcases.
 
 ### Stresstests
 
@@ -1261,6 +1339,7 @@ Eén kandidaat voor finale evaluatie kiezen zonder de onaangeraakte holdout te g
 - [ ] Tijdelijk ontbrekende eventfeed.
 - [ ] Feature-extremen en OOD-input.
 - [ ] Meerdere random seeds.
+- [ ] Strategy Monte Carlo onder base- en stresskosten.
 - [ ] Slechtste fold en slechtste belangrijk regime.
 
 ### Kandidaatselectie
@@ -1273,13 +1352,15 @@ Een complexere kandidaat wint alleen als zij:
 4. na conservatieve kosten niet instort;
 5. geen onaanvaardbare slechtste-foldprestatie heeft;
 6. operationeel uitvoerbaar blijft;
-7. een aantoonbare meerwaarde heeft tegenover de eenvoudigste champion.
+7. een aantoonbare meerwaarde heeft tegenover de eenvoudigste champion;
+8. Monte Carlo-resultaten reproduceerbaar zijn en niet uitsluitend door één seed, block length, horizon of regime worden gedragen.
 
 ### Bevriezen
 
 - [ ] Freeze data- en featureschema.
 - [ ] Freeze modelweights en calibrators.
 - [ ] Freeze ensemble, meta-labeler, OOD en policy.
+- [ ] Freeze Monte Carlo distribution/samplerconfig, draw count, block-bootstrapmethode en formele seeds.
 - [ ] Freeze kosten- en executionconfig.
 - [ ] Maak hashes van alle artefacten.
 - [ ] Schrijf een model card met beperkingen.
@@ -1288,6 +1369,7 @@ Een complexere kandidaat wint alleen als zij:
 ### Exitcriteria
 
 - Eén kandidaat is volledig bevroren.
+- Predictive en strategy Monte Carlo zijn ofwel aantoonbaar toegelaten, of expliciet verworpen met de eenvoudigere fallback behouden.
 - De finale holdout is nog nooit geopend.
 - Alle keuzes kunnen vanuit ontwikkelingsresultaten worden verklaard.
 
@@ -1622,9 +1704,11 @@ src/gold_forecasting/
   datasets/
   models/
   calibration/
+  uncertainty/
   ensemble/
   meta_labeling/
   ood/
+  decision/
   evaluation/
   backtesting/
   inference/
@@ -1694,6 +1778,13 @@ Hierdoor groeit het project geleidelijk zonder dat we later niet meer weten welk
 - Verwerp of vereenvoudig de module.
 - Hoge accuracy op vrijwel geen beslissingen is geen bruikbaar systeemresultaat.
 
+### Als Monte Carlo geen aantoonbare meerwaarde toevoegt
+
+- Behoud de gekalibreerde baseline-policy zonder Monte Carlo-filter.
+- Verhoog het aantal draws of de modelcomplexiteit niet alleen om een gunstiger backtestresultaat te zoeken.
+- Bewaar negatieve resultaten en ablations als evidence.
+- Strategy Monte Carlo mag als robuustheidsdiagnostiek blijven bestaan, ook wanneer predictive Monte Carlo niet in de decision policy wordt gepromoveerd.
+
 ### Als de finale holdout faalt
 
 - Geen `v1.0`-promotie.
@@ -1745,13 +1836,13 @@ Ze worden alleen toegevoegd via dezelfde hypothese-, ablation- en promotiecyclus
 
 - Neural core en future path zijn eerlijk vergeleken.
 - Alleen nuttige externe context is behouden.
-- Kansen zijn op OOF-data gekalibreerd.
-- Ensemble, meta-labeler en OOD ondersteunen selectieve beslissingen.
+- Kansen en relevante predictive distributions zijn op OOF-data gekalibreerd.
+- Ensemble, meta-labeler, OOD en een gevalideerde predictive Monte Carlo-challenger ondersteunen selectieve beslissingen.
 
 ### Niveau 4 — Gevalideerd research-algoritme (`v1.0`)
 
-- Kandidaat doorstaat ablations en stresstests.
-- Alle artefacten zijn bevroren.
+- Kandidaat doorstaat ablations, klassieke stresstests en strategy Monte Carlo-robustness.
+- Alle model-, calibratie-, policy- en Monte Carlo-artefacten zijn bevroren.
 - Onafhankelijke finale holdout haalt vooraf bepaalde criteria.
 
 ### Niveau 5 — Professioneel paper-trading-systeem (`v1.1`)

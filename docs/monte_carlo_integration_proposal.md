@@ -1,12 +1,30 @@
 # Voorstel — Monte Carlo-integratie voor Aurum Forecasting Tool
 
-**Status:** ontwerpvoorstel; nog niet activeren als productie- of tradinglogica  
-**Repository-review:** main op commit c8549f147a500dd734ead023e18de56d18040332  
-**Laatste formele benchmark:** Phase 8 run 20260908T020044407464Z-24f4c0d4  
-**Voorgestelde hoofdimplementatie:** Phase 11–13, met voorbereidende contracts in Phase 9  
+**Status:** **GEACCEPTEERD** — formeel opgenomen in de roadmap op 2026-09-08  
+**Oorspronkelijke repository-review:** main op commit c8549f147a500dd734ead023e18de56d18040332  
+**Laatste formele benchmark bij besluit:** Phase 8 run 20260908T020044407464Z-24f4c0d4  
+**Geaccepteerde hoofdimplementatie:** Phase 11–13; Phase 9 levert de distributionele precursor maar wordt niet meer inhoudelijk uitgebreid vóór zijn canonieke benchmark  
 **Doel:** de forecasting tool niet kunstmatig "nauwkeuriger" laten lijken, maar voorspellingen probabilistisch bruikbaarder maken voor selectiviteit, downside-control, no-tradebeslissingen en robuustheidsanalyse.
 
 ---
+
+## Besluit en roadmapstatus
+
+Dit voorstel is **geaccepteerd** als onderdeel van de officiële Aurum-roadmap.
+
+De geaccepteerde scope is:
+
+- **Phase 9:** behoudt zijn reeds bevroren future-path/quantile-contract als distributionele precursor. Er wordt vóór de canonieke Phase-9 benchmark geen nieuwe Monte Carlo-selectielogica, sampler of economische gate toegevoegd.
+- **Phase 11:** bouwt de noodzakelijke OOF-store en calibratie voor direction probabilities én continue/path distributions. Dit is een harde prerequisite voor economische Monte Carlo-uitvoer.
+- **Phase 12:** implementeert **predictive Monte Carlo** per forecast als versioned uncertainty/risk-summary en vergelijkt een Monte Carlo-aware decision policy eerlijk met de gekalibreerde baseline.
+- **Phase 13:** implementeert **strategy Monte Carlo** met block/stationary bootstrap als robuustheids- en stresstest vóór de finale holdout.
+- **Phase 14:** opent de finale holdout slechts één keer, nadat model, calibrators, Monte Carlo-config, sampler, seeds en decision policy volledig zijn bevroren.
+
+Acceptatie van dit voorstel betekent **niet** dat Monte Carlo automatisch champion-functionaliteit wordt.
+Iedere Monte Carlo-component blijft een challenger en moet dezelfde leakage-, OOF-, ablation-,
+reproduceerbaarheids-, worst-fold-, kosten- en no-tradepoorten doorstaan als andere complexiteit.
+
+De finale 2025+ holdout blijft gesloten.
 
 ## 1. Samenvatting van het advies
 
@@ -228,9 +246,17 @@ De tweede flow moet de **backtester opnieuw uitvoeren** op resampled chronologis
 
 ## 5. Implementatie per roadmapfase
 
-### Phase 9 — voorbereiden, nog niet als tradefilter gebruiken
+### Phase 9 — distributionele precursor behouden, benchmarkscope niet meer wijzigen
 
-Bouw een algemeen distributioneel contract dat niet aan GRU of één horizon is gekoppeld.
+Phase 9 levert reeds de noodzakelijke probabilistische precursor via zijn geordende
+q10/q50/q90 future-path- en aggregate-heads. Omdat `phase9-v1` inmiddels structureel
+bevroren is en de canonieke benchmark nog moet worden uitgevoerd, wordt vóór die benchmark
+**geen nieuw Monte Carlo-contract, sampler of tradefilter meer aan Phase 9 toegevoegd**.
+
+De hieronder beschreven generieke uncertainty-contracts worden daarom formeel doorgeschoven
+naar Phase 11, waar zij op echte OOF-calibratie kunnen worden aangesloten.
+
+Bouw daar een algemeen distributioneel contract dat niet aan GRU of één horizon is gekoppeld.
 
 Voorgestelde nieuwe componenten:
 

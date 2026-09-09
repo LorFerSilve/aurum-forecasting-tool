@@ -14,6 +14,7 @@ mvp_app = typer.Typer(help="Run the vertical research MVP.")
 benchmark_app = typer.Typer(help="Run the guarded phase-6 multi-horizon benchmark.")
 phase7_app = typer.Typer(help="Run phase-7 richer price-only feature ablations.")
 phase8_app = typer.Typer(help="Run the guarded phase-8 multi-timeframe neural challenger.")
+phase9_app = typer.Typer(help="Develop and verify the phase-9 future-path challenger.")
 
 app.add_typer(config_app, name="config")
 app.add_typer(data_app, name="data")
@@ -22,6 +23,7 @@ app.add_typer(mvp_app, name="mvp")
 app.add_typer(benchmark_app, name="benchmark")
 app.add_typer(phase7_app, name="phase7")
 app.add_typer(phase8_app, name="phase8")
+app.add_typer(phase9_app, name="phase9")
 
 ConfigOption = Annotated[
     Path,
@@ -35,6 +37,70 @@ YearsOption = Annotated[
     str | None,
     typer.Option(help="Optional comma-separated development years, for example 2023,2024."),
 ]
+
+
+@phase9_app.command("dry-run")
+def dry_run_phase9_research(
+    output: Annotated[
+        Path,
+        typer.Option(
+            help="New destination for the isolated synthetic phase-9 integration run."
+        ),
+    ] = Path("reports/phase9_dry_run"),
+) -> None:
+    """Exercise phase-9 end to end without opening a formal benchmark."""
+
+    from gold_forecasting.phase9.dry_run import run_phase9_synthetic_dry_run
+
+    result = run_phase9_synthetic_dry_run(output)
+    typer.echo(json.dumps(result, indent=2))
+
+
+@phase9_app.command("validate")
+def validate_phase9_research(
+    run_directory: Annotated[Path, typer.Argument(exists=True, file_okay=False)],
+) -> None:
+    """Verify a persisted phase-9 dry-run or future formal run."""
+
+    from gold_forecasting.phase9.artifacts import verify_phase9
+
+    typer.echo(json.dumps(verify_phase9(run_directory), indent=2))
+
+
+@phase9_app.command("preflight")
+def preflight_phase9_research(
+    config: ConfigOption = Path("configs/phase9.yaml"),
+    report: Annotated[
+        Path,
+        typer.Option(
+            help="JSON evidence report under reports/; no formal benchmark is started."
+        ),
+    ] = Path("reports/phase9_preflight.json"),
+) -> None:
+    """Run guarded real-data checks without opening the formal Phase-9 benchmark."""
+
+    from gold_forecasting.phase9.preflight import run_phase9_preflight
+
+    result = run_phase9_preflight(
+        config,
+        report_path=report,
+    )
+    typer.echo(
+        f"Phase 9 preflight {result['status']}: "
+        f"rows={result['dataset']['common_eligible']}, report={report}"
+    )
+
+
+@phase9_app.command("run")
+def run_phase9_research(
+    config: ConfigOption = Path("configs/phase9.yaml"),
+) -> None:
+    """Run the canonical Phase-9 benchmark behind its embedded real-data preflight."""
+
+    from gold_forecasting.phase9.pipeline import run_phase9
+
+    output = run_phase9(config)
+    typer.echo(f"Completed phase 9: {output}")
 
 
 @phase8_app.command("run")

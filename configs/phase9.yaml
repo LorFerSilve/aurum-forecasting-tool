@@ -1,0 +1,56 @@
+schema_version: 1
+protocol_version: phase9-v1
+data_config: phase5.yaml
+
+phase7_reference_run: 20260907T014255645674Z-b2afe281
+phase7_reference_code: 3f0a703568224fe9169b1e9f8d61dad131f0005b
+phase7_reference_completion: sha256:beac58092d06350bb067fbd2df144bb9cb2507f45053c19487474c87d0ceca0f
+phase7_champion_config: phase7_champion.yaml
+
+phase8_reference_run: 20260908T020044407464Z-24f4c0d4
+phase8_reference_code: 75945fe70606c8200cebc66678d0e220db5fb0ad
+phase8_reference_completion: sha256:9bce4a80c7e0d65fc40ccd4e1fea3c1ef2d56022f8b60720f3d1a8b54cfbb922
+test_years: [2022, 2023, 2024]
+seeds: [20260906, 20260907]
+benchmark_variants: [direct, recursive]
+
+path_timeframe: 3min
+path_steps: 5
+path_minutes: 15
+quantiles: [0.10, 0.50, 0.90]
+neutral_threshold_bps: 6.0
+reconstruction_clip_log_bps: 5000.0
+
+# The 15-minute path challenger deliberately uses only the fast/mid encoders.
+timeframes: [1min, 3min, 15min]
+sequence_lengths:
+  1min: 60
+  3min: 20
+  15min: 8
+
+encoder_hidden_size: 32
+fusion_size: 32
+parameter_budget: 200000
+
+batch_size: 2048
+max_epochs: 24
+early_stopping_patience: 4
+learning_rate: 0.001
+weight_decay: 0.0001
+gradient_clip_norm: 1.0
+class_weighting: none
+minimum_policy_trades: 20
+
+direction_loss_weight: 1.0
+return_loss_weight: 0.25
+range_loss_weight: 0.10
+volatility_loss_weight: 0.10
+path_quantile_loss_weight: 1.0
+aggregate_quantile_loss_weight: 0.25
+cumulative_return_loss_weight: 0.25
+temporal_consistency_loss_weight: 0.10
+
+device: auto
+mixed_precision: true
+deterministic_algorithms: true
+output_directory: reports/phase9_runs

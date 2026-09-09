@@ -52,7 +52,30 @@ class MultiTimeframeGRU(nn.Module):
         super().__init__()
         if not timeframes or len(set(timeframes)) != len(timeframes):
             raise Phase8ModelError("timeframes must be nonempty and unique")
+        if any(
+            not isinstance(name, str) or not name or "." in name
+            for name in timeframes
+        ):
+            raise Phase8ModelError(
+                "timeframes must be nonempty module names without dots"
+            )
+        if any(
+            type(value) is not int or value < 1
+            for value in (
+                input_size,
+                hidden_size,
+                fusion_size,
+                parameter_budget,
+            )
+        ):
+            raise Phase8ModelError(
+                "architecture dimensions and budget must be positive integers"
+            )
         self.timeframes = timeframes
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        self.fusion_size = fusion_size
+        self.parameter_budget = parameter_budget
         self.encoders = nn.ModuleDict(
             {name: GRUEncoder(input_size, hidden_size) for name in timeframes}
         )
@@ -73,33 +96,82 @@ class MultiTimeframeGRU(nn.Module):
                 f"neural parameter count {self.parameter_count} exceeds budget {parameter_budget}"
             )
 
+    def encode(
+        self,
+        sequences: dict[str, Tensor],
+        availability: Tensor,
+    ) -> tuple[Tensor, Tensor]:
+        """Return the fused representation and availability-aware weights."""
+
+        if availability.ndim != 2 or availability.shape[1] != len(self.timeframes):
+            raise Phase8ModelError("availability must have shape [batch, timeframes]")
+        if availability.dtype != torch.bool:
+            raise Phase8ModelError("availability must be a boolean tensor")
+        if availability.shape[0] < 1:
+            raise Phase8ModelError("sequence batches must be nonempty")
+        if set(sequences) != set(self.timeframes):
+            raise Phase8ModelError(
+                "sequence tensors must exactly match configured timeframes"
+            )
+        if (~availability).all(dim=1).any():
+            raise Phase8ModelError(
+                "every sample requires at least one available timeframe"
+            )
+
+        embeddings: list[Tensor] = []
+        gate_logits: list[Tensor] = []
+        for index, name in enumerate(self.timeframes):
+            values = sequences[name]
+            if (
+                values.ndim != 3
+                or values.shape[0] != availability.shape[0]
+                or values.shape[1] < 1
+                or values.shape[2] != self.input_size
+            ):
+                raise Phase8ModelError(
+                    f"{name} sequences must have shape "
+                    "[batch, nonempty timesteps, input_size]"
+                )
+            if not values.is_floating_point() or values.device != availability.device:
+                raise Phase8ModelError(
+                    "sequences must be floating tensors on the mask device"
+                )
+            # Unavailable branches must not influence fusion, including via NaN * 0.
+            values = values.masked_fill(
+                ~availability[:, index, None, None],
+                0.0,
+            )
+            if not torch.isfinite(values).all():
+                raise Phase8ModelError(
+                    f"non-finite available sequence values for {name}"
+                )
+            encoded = self.encoders[name](values)
+            embeddings.append(torch.tanh(self.projections[name](encoded)))
+            gate_logits.append(self.gates[name](encoded).squeeze(-1))
+            if not torch.isfinite(encoded).all():
+                raise Phase8ModelError(f"non-finite encoder output for {name}")
+
+        # Keep gate/fusion accumulation in fp32 even when the encoders use autocast.
+        stacked = torch.stack(embeddings, dim=1).float()
+        logits = torch.stack(gate_logits, dim=1).float()
+        logits = logits.masked_fill(
+            ~availability,
+            torch.finfo(logits.dtype).min,
+        )
+        weights = torch.softmax(logits, dim=1)
+        fused = self.fusion_norm(
+            (stacked * weights.unsqueeze(-1)).sum(dim=1)
+        )
+        if not torch.isfinite(fused).all() or not torch.isfinite(weights).all():
+            raise Phase8ModelError("fusion produced non-finite outputs")
+        return fused, weights
+
     def forward(
         self,
         sequences: dict[str, Tensor],
         availability: Tensor,
     ) -> NeuralOutputs:
-        if availability.ndim != 2 or availability.shape[1] != len(self.timeframes):
-            raise Phase8ModelError("availability must have shape [batch, timeframes]")
-        embeddings: list[Tensor] = []
-        gate_logits: list[Tensor] = []
-        for index, name in enumerate(self.timeframes):
-            if name not in sequences:
-                raise Phase8ModelError(f"missing sequence tensor for {name}")
-            encoded = self.encoders[name](sequences[name])
-            embeddings.append(torch.tanh(self.projections[name](encoded)))
-            gate_logits.append(self.gates[name](encoded).squeeze(-1))
-            if not torch.isfinite(encoded).all():
-                raise Phase8ModelError(f"non-finite encoder output for {name}")
-            if availability[:, index].ndim != 1:
-                raise Phase8ModelError("invalid availability column")
-        stacked = torch.stack(embeddings, dim=1)
-        logits = torch.stack(gate_logits, dim=1)
-        mask = availability.to(dtype=torch.bool)
-        if (~mask).all(dim=1).any():
-            raise Phase8ModelError("every sample requires at least one available timeframe")
-        logits = logits.masked_fill(~mask, torch.finfo(logits.dtype).min)
-        weights = torch.softmax(logits, dim=1)
-        fused = self.fusion_norm((stacked * weights.unsqueeze(-1)).sum(dim=1))
+        fused, weights = self.encode(sequences, availability)
         direction = self.direction_head(fused)
         normalized_return = self.return_head(fused).squeeze(-1)
         normalized_range = F.softplus(self.range_head(fused).squeeze(-1))

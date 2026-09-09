@@ -73,3 +73,92 @@ def test_every_sample_requires_at_least_one_available_encoder() -> None:
             {"3min": torch.zeros(2, 4, 6)},
             torch.zeros(2, 1, dtype=torch.bool),
         )
+
+
+def test_unavailable_nan_branch_is_zeroed_before_encoding() -> None:
+    torch.manual_seed(31)
+    model = MultiTimeframeGRU(
+        ("1min", "3min"),
+        input_size=6,
+        hidden_size=8,
+        fusion_size=8,
+        parameter_budget=30_000,
+    )
+    sequences = {
+        "1min": torch.full((2, 4, 6), float("nan")),
+        "3min": torch.randn(2, 4, 6),
+    }
+    availability = torch.tensor(
+        [
+            [False, True],
+            [False, True],
+        ],
+        dtype=torch.bool,
+    )
+
+    output = model(sequences, availability)
+
+    assert torch.isfinite(output.direction_logits).all()
+    assert torch.all(output.fusion_weights[:, 0] == 0.0)
+
+
+def test_nonfinite_available_sequence_fails_closed() -> None:
+    model = MultiTimeframeGRU(
+        ("3min",),
+        input_size=6,
+        hidden_size=8,
+        fusion_size=8,
+        parameter_budget=20_000,
+    )
+    values = torch.zeros(2, 4, 6)
+    values[0, 0, 0] = float("nan")
+
+    with pytest.raises(Phase8ModelError, match="non-finite available"):
+        model(
+            {"3min": values},
+            torch.ones(2, 1, dtype=torch.bool),
+        )
+
+
+def test_sequence_contract_rejects_nonboolean_mask_and_extra_key() -> None:
+    model = MultiTimeframeGRU(
+        ("3min",),
+        input_size=6,
+        hidden_size=8,
+        fusion_size=8,
+        parameter_budget=20_000,
+    )
+    values = torch.zeros(2, 4, 6)
+
+    with pytest.raises(Phase8ModelError, match="boolean"):
+        model(
+            {"3min": values},
+            torch.ones(2, 1),
+        )
+    with pytest.raises(Phase8ModelError, match="exactly match"):
+        model(
+            {
+                "3min": values,
+                "extra": values,
+            },
+            torch.ones(2, 1, dtype=torch.bool),
+        )
+
+
+def test_architecture_contract_rejects_invalid_module_names_and_dimensions() -> None:
+    with pytest.raises(Phase8ModelError, match="without dots"):
+        MultiTimeframeGRU(
+            ("3.min",),
+            input_size=6,
+            hidden_size=8,
+            fusion_size=8,
+            parameter_budget=20_000,
+        )
+    with pytest.raises(Phase8ModelError, match="positive integers"):
+        MultiTimeframeGRU(
+            ("3min",),
+            input_size=0,
+            hidden_size=8,
+            fusion_size=8,
+            parameter_budget=20_000,
+        )

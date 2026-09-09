@@ -9,8 +9,15 @@
 
 De formele run eindigde met status `succeeded` na **7u 49m 20s**. De lokale
 `phase7 validate` controleerde **11.311 bestanden** en accepteerde completion-versie
-`sha256:beac58092d06350bb067fbd2df144bb9cb2507f45953c19487474c87d0ceca0f`.
+`sha256:beac58092d06350bb067fbd2df144bb9cb2507f45053c19487474c87d0ceca0f`.
 De finale holdout bleef gesloten (`holdout_opened=false`).
+
+**Auditcorrectie 2026-09-08:** de eerder in Git vastgelegde completion-versie bevatte
+één verkeerd overgenomen teken (`...7f45953c...`). De oorspronkelijke lokale
+`completion.json` heeft CreationTime en LastWriteTime `2026-09-07 11:32:15` en de
+volledige `phase7 validate` verifieert opnieuw alle 11.311 artifacts met de hierboven
+vermelde versie `...7f45053c...`. Dit corrigeert uitsluitend repository-evidence; de
+Phase-7 run, artifacts, resultaten en holdoutstatus zijn niet gewijzigd.
 
 Dataversie:
 `sha256:555458e7eafa7dbef51e624b22fc4867d41367e8a5b026d2dad42a085408663d`.  

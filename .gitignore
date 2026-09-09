@@ -54,6 +54,9 @@ reports/runs/**
 reports/benchmark_runs/**
 reports/phase7_runs/**
 reports/phase8_runs/**
+reports/phase9_runs/**
+reports/phase9_dry_run/**
+reports/phase9_preflight.json
 reports/data/*.parquet
 
 
