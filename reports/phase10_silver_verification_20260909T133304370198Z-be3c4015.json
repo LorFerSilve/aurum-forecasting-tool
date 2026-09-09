@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "protocol": "phase10-silver-modeled-v1",
+  "run_id": "20260909T133304370198Z-be3c4015",
+  "code_version": "ce904e9a0d320e543970e5a19800833b4f994130",
+  "completion_version": "sha256:c971eed86adf0d5b1e26cfd4dfa4a45436f58553945d3d70d6046f8dab0741d3",
+  "verified_files": 181,
+  "holdout_opened": false,
+  "champion_promotion": false,
+  "trading_activation": false,
+  "decision": "stop",
+  "evidence_status": "exploratory_no_predictive_admission",
+  "baseline": {
+    "run_id": "20260907T014255645674Z-b2afe281",
+    "completion_version": "sha256:beac58092d06350bb067fbd2df144bb9cb2507f45053c19487474c87d0ceca0f",
+    "variant": "mvp",
+    "family": "logistic"
+  },
+  "aggregate": {
+    "reference": {
+      "accuracy": 0.5952142848396321,
+      "balanced_accuracy": 0.42254241846646007,
+      "macro_f1": 0.4250524337123649,
+      "brier": 0.5790632398366763,
+      "log_loss": 0.9843232179778449,
+      "calibration_error": 0.15282282925221405,
+      "return_mae_bps": 6.0083704208674575
+    },
+    "silver": {
+      "accuracy": 0.6056450608696194,
+      "balanced_accuracy": 0.4184315213853356,
+      "macro_f1": 0.42155494905881546,
+      "brier": 0.5713094508236107,
+      "log_loss": 0.9717564002204065,
+      "calibration_error": 0.15842775721314395,
+      "return_mae_bps": 6.008568049840659
+    },
+    "delta_silver_minus_reference": {
+      "accuracy": 0.010430776029987321,
+      "balanced_accuracy": -0.004110897081124443,
+      "macro_f1": -0.003497484653549432,
+      "brier": -0.00775378901306556,
+      "log_loss": -0.012566817757438398,
+      "calibration_error": 0.005604927960929901,
+      "return_mae_bps": 0.00019762897320152462
+    }
+  },
+  "macro_f1_by_fold": {
+    "test_2022": {
+      "reference": 0.4251015546762434,
+      "silver": 0.4222196389659631,
+      "delta": -0.002881915710280301
+    },
+    "test_2023": {
+      "reference": 0.42358241389195933,
+      "silver": 0.41885327081707646,
+      "delta": -0.00472914307488287
+    },
+    "test_2024": {
+      "reference": 0.4264733325688919,
+      "silver": 0.42359193739340667,
+      "delta": -0.002881395175485247
+    }
+  },
+  "context": {
+    "test_2022": {
+      "usable_fraction": 0.9007598496525243,
+      "fallback_fraction": 0.09924015034747573
+    },
+    "test_2023": {
+      "usable_fraction": 0.8453897464300335,
+      "fallback_fraction": 0.15461025356996652
+    },
+    "test_2024": {
+      "usable_fraction": 0.9278024806927218,
+      "fallback_fraction": 0.07219751930727826
+    }
+  },
+  "predictive_gate_passed": false,
+  "economic_gate_passed": false,
+  "next_source": "dollar_proxy"
+}

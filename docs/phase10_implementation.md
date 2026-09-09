@@ -1,6 +1,6 @@
 # Fase 10 — externe context en eventinformatie
 
-**Status:** exploratory real-data runner en validator geïmplementeerd; nog geen echte XAGUSD markt-run of `v0.3`-release.
+**Status:** XAGUSD exploratory ablation afgerond en gevalideerd (`stop`); Phase 10 gaat verder met de dollarproxy.
 
 **Branch:** `codex/phase10-external-context`
 
@@ -191,11 +191,30 @@ komen pas na de silverbeslissing aan bod.
   895 synthetische prediction rows en 178 testrows per variant.
 - Bij tijdelijke uitval/vensterherstel gebruiken 55 testrows exact de price-only
   probabilities; zonder bron vallen alle 178 testrows exact daarop terug.
-- De disabled strict bronpreflight blijft terecht geblokkeerd. De nieuwe real-data
-  preflight/runner is geïmplementeerd maar nog niet tegen de lokale 2020–2024 XAGUSD
-  archive-set uitgevoerd; er is dus nog geen empirisch silverresultaat.
+- De real-data XAGUSD run `20260909T133304370198Z-be3c4015` is volledig gevalideerd:
+  181 bestanden, completion `sha256:c971eed86adf0d5b1e26cfd4dfa4a45436f58553945d3d70d6046f8dab0741d3`.
+  De predictive en economic gates falen en de vooraf vastgelegde beslissing is `stop`.
 
 Het compacte [verificatiebewijs](../reports/phase10_verification_20260909.json)
 bevat ook SHA-256-hashes van de nieuwe implementatie en het completionmanifest.
 De proefrun is uitgevoerd op een lokale gewijzigde checkout; het is geen
 benchmark vanaf een bevroren releasecommit.
+
+
+## Silverbesluit — 2026-09-09
+
+De eerste echte Phase-10 bronablation is afgerond. Silver verbeterde gewone accuracy,
+Brier en log loss, maar verslechterde balanced accuracy en macro-F1. Macro-F1 daalde
+in alle drie outer folds. Return-MAE veranderde praktisch niet en zowel reference als
+silver bleven cash/no-trade.
+
+Daarom:
+
+- predictive gate: **failed**;
+- economic gate: **failed**;
+- champion promotion: **false**;
+- strict silver source zoeken: **niet gerechtvaardigd door deze evidence**;
+- beslissing: **stop**;
+- volgende onafhankelijke bronhypothese: **dollarproxy**.
+
+Zie [het silver-verificatierapport](phase10_silver_verification.md).

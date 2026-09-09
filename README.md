@@ -210,8 +210,10 @@ exploratory: hij kan nooit de champion wijzigen of trading activeren. Een positi
 kan alleen de beslissing `seek_strict_source` rechtvaardigen. De 2025+ holdout blijft
 gesloten.
 
-De runner/validator zijn geïmplementeerd en CI is groen; de echte lokale XAGUSD
-2020–2024 preflight en markt-run zijn nog niet uitgevoerd. Zie
+De real-data XAGUSD run `20260909T133304370198Z-be3c4015` is afgerond en volledig
+gevalideerd (181 bestanden). Silver verbeterde probability scores maar verslechterde
+macro-F1 in alle drie outer folds; predictive en economic admission faalden. De
+beslissing is daarom `stop` en de Phase-7 15m champion blijft behouden. Zie
 [het Phase-10 protocol](docs/research_protocol_phase10.md) en
 [de implementatiestatus](docs/phase10_implementation.md).
 

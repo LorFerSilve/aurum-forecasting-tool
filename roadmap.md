@@ -1135,9 +1135,10 @@ daarom uitsluitend exploratory en kan geen championpromotie activeren.
 Het vooraf bevroren protocol staat in
 [docs/research_protocol_phase10.md](docs/research_protocol_phase10.md).
 De frozen Phase-7 reference-loader, real-data XAGUSD preflight, nested logistic
-silver challenger, run-artifacts en validator zijn nu eveneens geïmplementeerd en
-CI-groen. De echte lokale XAGUSD 2020–2024 preflight/market ablation is nog niet
-uitgevoerd; er is dus nog geen contextpromotie of `v0.3`-release.
+silver challenger, run-artifacts en validator zijn geïmplementeerd en CI-groen.
+De real-data XAGUSD ablation is afgerond en gevalideerd: predictive en economic gates
+faalden, beslissing `stop`. Silver wordt niet toegelaten; Phase 10 gaat verder met de
+dollarproxy. Er is nog geen contextpromotie of `v0.3`-release.
 
 ### Exitcriteria
 
@@ -1145,7 +1146,7 @@ uitgevoerd; er is dus nog geen contextpromotie of `v0.3`-release.
 - [x] De silver challenger behoudt exact hetzelfde gold sample-universe en kan volledig
   terugvallen op de frozen price-only champion.
 - [x] Modeled-latency evidence kan technisch geen championpromotie activeren.
-- [ ] Voer de echte XAGUSD 2020–2024 exploratory ablation uit en neem het silverbesluit.
+- [x] Voer de echte XAGUSD 2020–2024 exploratory ablation uit en neem het silverbesluit (`stop`).
 - [ ] Voeg alleen bronnen met bewezen strict-PIT meerwaarde standaard toe.
 - [ ] Bevries uiteindelijk de Phase-10 bronset vóór `v0.3`.
 
