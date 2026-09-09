@@ -145,7 +145,7 @@ def test_bundle_set_rejects_duplicate_observation_across_partitions(tmp_path: Pa
         encoding="utf-8",
     )
 
-    with pytest.raises(ValueError, match="duplicate observation version identity"):
+    with pytest.raises(ValueError, match="ambiguous versions"):
         load_context_bundle_set(set_path, _source())
 
 
@@ -192,5 +192,5 @@ def test_bundle_format_must_match_file_suffix(tmp_path: Path) -> None:
         ),
         encoding="utf-8",
     )
-    with pytest.raises(ValueError, match=r"requires a \\.parquet file"):
+    with pytest.raises(ValueError, match=r"requires a \.parquet file"):
         load_context_bundle(path, _source())
