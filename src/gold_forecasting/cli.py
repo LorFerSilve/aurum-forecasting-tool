@@ -41,6 +41,44 @@ YearsOption = Annotated[
 ]
 
 
+@phase10_app.command("silver-import")
+def import_phase10_silver_context(
+    archive_directory: Annotated[
+        Path,
+        typer.Option(
+            exists=True,
+            file_okay=False,
+            help="Directory containing annual HISTDATA_COM_ASCII_XAGUSD_M1_<year>.zip files.",
+        ),
+    ],
+    output: Annotated[
+        Path,
+        typer.Option(help="New destination for authenticated annual silver context bundles."),
+    ] = Path("data/context/phase10/silver"),
+    source: ConfigOption = Path("configs/phase10_silver_exploratory.yaml"),
+    years: YearsOption = None,
+) -> None:
+    """Convert local XAGUSD archives into modeled-latency Phase-10 context bundles."""
+    from gold_forecasting.phase10.contracts import load_source
+    from gold_forecasting.phase10.silver_histdata import import_histdata_silver_archives
+
+    selected_years = (2020, 2021, 2022, 2023, 2024)
+    if years is not None:
+        try:
+            selected_years = tuple(
+                int(item.strip()) for item in years.split(",") if item.strip()
+            )
+        except ValueError as exc:
+            raise typer.BadParameter("years must be comma-separated integers") from exc
+    result = import_histdata_silver_archives(
+        archive_directory,
+        output,
+        load_source(source),
+        years=selected_years,
+    )
+    typer.echo(json.dumps(result, indent=2))
+
+
 @phase10_app.command("dry-run")
 def dry_run_phase10_context(
     output: Annotated[
