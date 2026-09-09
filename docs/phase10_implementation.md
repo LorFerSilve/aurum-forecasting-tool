@@ -14,7 +14,7 @@ path-returnaudit exact. De Phase-7 researchchampions blijven bevroren, inclusief
 ## Uitvoerbare eerste keten
 
 ```text
-broncontract + CSV met beschikbaarheid/vintages + manifest
+broncontract + geauthenticeerde CSV/Parquet-partities + bundle-set
 -> metadata-only ontwikkelingsguard
 -> SHA-256-verificatie van dezelfde bytes die worden ingelezen
 -> backward as-of contextkoppeling
@@ -66,12 +66,13 @@ Een waarneming bevat:
 | `revision_id` | Identiteit van deze versie |
 | `source_uri`, `raw_sha256` | Herkomst van het oorspronkelijke bronartefact |
 
-Corefuncties accepteren uitsluitend expliciet UTC-aware timestamps. Een
-CSV-bundle verlangt ISO-tijden met `T` en `Z` of `+00:00`, een exacte kolomvolgorde,
-row count, SHA-256 en halfopen observatiegrenzen binnen 2020–2024. Deze grenzen
-worden vóór het lezen van de CSV gecontroleerd. De bundlehash authenticeert
-de lokale CSV; de upstream hashes in de rijen moeten bij brontoelating nog
-tegen de originele bronbestanden worden gecontroleerd.
+Corefuncties accepteren uitsluitend expliciet UTC-aware timestamps. Kleine/synthetische
+bundles kunnen CSV gebruiken; real-data context gebruikt gecomprimeerde Parquet-partities.
+Iedere partitie heeft een exacte kolomvolgorde, row count, SHA-256 en halfopen
+observatiegrenzen binnen 2020–2024. Een bundle-set mag uitsluitend sibling manifests
+bevatten en de volledige samengevoegde release stream wordt opnieuw gevalideerd.
+De XAGUSD-import bewaart daarnaast per jaarlijks bronarchief SHA-256, grootte,
+bronpagina, gebruikte ZIP-members en project-ingestiontijd.
 
 Per cutoff wordt de recentste waarneming genomen uit de versies die toen
 beschikbaar waren. Een late revisie van een oudere periode vervangt geen
@@ -112,48 +113,44 @@ wijziging en annulering en voegt de eventvelden aan de audittabel toe. Deze
 eventvelden zijn nog geen modelinputs; bronablation blijft één bron tegelijk.
 De eventtabel accepteert geen extra consensus-/surprisevelden.
 
-## Zilverbron: beschikbaar, maar nog niet toegelaten
+## Zilverbron: adapter gereed, strict-PIT evidence nog geblokkeerd
 
-De officiële HistData-downloadpagina's voor XAGUSD M1 2020–2024 vermelden de
-verwachte jaarlijkse ZIP-bestanden. Die pagina's zijn op 2026-09-09 gecontroleerd;
-de ZIP-inhoud en historische dekking zijn nog niet gedownload of gevalideerd.
-Zie de [2020-pagina](https://www.histdata.com/download-free-forex-historical-data/?/ascii/1-minute-bar-quotes/xagusd/2020)
-en [2024-pagina](https://www.histdata.com/download-free-forex-historical-data/?/ascii/1-minute-bar-quotes/xagusd/2024).
+De officiële HistData XAGUSD M1-bron blijft methodologisch beperkt doordat historische
+per-row release timestamps ontbreken. Daarom zijn nu twee expliciet gescheiden configs
+aanwezig:
 
-De [officiële specificatie](https://www.histdata.com/f-a-q/data-files-detailed-specification/)
-beschrijft vaste EST zonder DST. De [FAQ](https://www.histdata.com/f-a-q/) beschrijft
-bid-only OHLC en onbruikbaar volume. De interpretatie als candle-open timestamp
-komt uit de bestaande projectadapter; de geraadpleegde specificatie benoemt dat
-niet expliciet. Dit moet bij een XAGUSD-adapter als aanname worden geregistreerd.
+- `configs/phase10_silver.yaml`: disabled, strict gate blijft gesloten;
+- `configs/phase10_silver_exploratory.yaml`: enabled voor uitsluitend
+  `phase10-silver-modeled-v1`.
 
-De geraadpleegde bronvelden leveren geen historische publicatie- of revisietijden.
-Daaruit volgt voor deze fase: een `available_at` berekend uit candle close plus
-60 seconden is een **onderzoeksaanname**. De huidige downloadtijd bewijst geen
-historische beschikbaarheid. Daarom staat `configs/phase10_silver.yaml` op
-`availability_basis: modeled_latency` en `enabled: false`. `require_strict_pit`
-weigert zowel deze basis als synthetische beschikbaarheid. Ook een gedeclareerde
-provider timestamp vereist nog inhoudelijke controle van de brononderbouwing.
+De aparte `phase10/silver_histdata.py` adapter verandert de frozen XAUUSD-ingestie niet.
+Hij accepteert alleen XAGUSD ZIP-members, controleert archive SHA-256/CRC, vaste UTC−05,
+source-year en OHLC-invarianten, en converteert de bid-close naar het contextcontract.
+`observed_at` is candle close; `available_at` is candle close + 60 seconden en blijft
+expliciet een modeled-latency aanname.
 
-De bestaande goudadapter blijft ongewijzigd: zilver mag niet als XAUUSD worden
-geparseerd en daarna worden hernoemd. Bij uitbreiding moeten URL, formulier,
-ZIP-member, bronidentiteit en metadata consequent XAGUSD zijn. Data blijft lokaal
-volgens [het databronbeleid](data_licenses.md).
+Real-data wordt per jaar als geauthenticeerde Parquet-partitie opgeslagen, met één
+bundle-setmanifest voor de volledige 2020–2024 stream. De lokale bronarchieven worden
+niet in Git opgenomen. Een modeled-latency bundle kan de status
+`ready_for_exploratory_ablation` krijgen, maar `strict_pit_source_ready` en
+`formal_benchmark_ready` blijven false.
+
+Zie [het Phase-10 onderzoeksprotocol](research_protocol_phase10.md) voor de vooraf
+bevroren admissionregels.
 
 ## Resterend werk vóór afronding van fase 10
 
-1. Kwalificeer de eerste zilverbron en haar historische beschikbaarheidsbewijs.
-   Als alleen modeled latency haalbaar is, documenteer dat als apart exploratief
-   protocol; presenteer het niet als de strikte point-in-time benchmark.
-2. Bouw de bronadapter, geverifieerde lokale bronmanifesten en real-data preflight.
-3. Bevries het empirische ablationprotocol: dezelfde ontwikkelingsfolds en
-   sample IDs, train-only transformaties, inner-only selectie, expliciete
-   toelatingscriteria en vergelijking met de gepinde price-only champion.
-4. Voer de marktbenchmark uit met coverage, stale/missing, worst-foldkwaliteit
-   en base-/stresskosten. Alleen de bron met aangetoonde meerwaarde kan worden
-   toegelaten; de bronloze champion blijft beschikbaar.
-5. Herhaal dit achtereenvolgens voor dollar, rente en de eventbronnen. Betrouwbare
-   historische schedule-vintages zijn vereist; consensus/surprise blijft uit
-   totdat daarvoor afzonderlijk point-in-time bewijs bestaat.
+1. Importeer en verifieer de echte lokale XAGUSD 2020–2024 annual archives.
+2. Draai de real-data source preflight en inspecteer coverage/staleness/alignment.
+3. Implementeer de frozen Phase-7 15m reference-pariteit en logistic silver challenger
+   conform `phase10-silver-modeled-v1`.
+4. Voer de modeled-latency exploratory ablation uit. Deze kan nooit championpromotie
+   activeren; een positief signaal rechtvaardigt alleen het zoeken van strict-PIT evidence.
+5. Alleen wanneer historische provider-release-evidence beschikbaar komt, mag een
+   strict `phase10-context-v1` silver benchmark worden geopend.
+6. Herhaal de broncyclus daarna voor dollar, rente en de eventbronnen. Historische
+   schedule-vintages zijn vereist; consensus/surprise blijft uit totdat daarvoor
+   afzonderlijk point-in-time bewijs bestaat.
 
 De technische proefresultaten mogen geen Phase-9 artefacten, championconfiguratie,
 holdoutbesluit, probability-calibratie of paper/live trading activeren.
