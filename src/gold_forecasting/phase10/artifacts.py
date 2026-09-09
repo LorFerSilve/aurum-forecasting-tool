@@ -18,7 +18,12 @@ import numpy as np
 import pandas as pd
 from pandas.api.types import is_bool_dtype
 
-from gold_forecasting.artifacts import content_version, file_digest, write_json_atomic
+from gold_forecasting.artifacts import (
+    content_version,
+    file_digest,
+    sha256_file,
+    write_json_atomic,
+)
 from gold_forecasting.backtesting.v1 import DecisionPolicy, run_backtest_v1
 from gold_forecasting.benchmark.pipeline import (
     BASE_COSTS,
@@ -29,6 +34,7 @@ from gold_forecasting.benchmark.pipeline import (
     select_policy,
 )
 from gold_forecasting.classification import CLASS_ORDER, validate_probability_matrix
+from gold_forecasting.config import _load_yaml_mapping
 from gold_forecasting.datasets.preprocessing import sample_id_digest
 from gold_forecasting.evaluation.walk_forward import (
     WalkForwardFold,
@@ -37,7 +43,10 @@ from gold_forecasting.evaluation.walk_forward import (
     validate_development_frame,
 )
 from gold_forecasting.phase7.pipeline import _economic_gate, _predictive_gate
+from gold_forecasting.phase10.config import Phase10Config
+from gold_forecasting.phase10.contracts import ContextSource
 from gold_forecasting.phase10.features import SILVER_FEATURE_NAMES, build_silver_features
+from gold_forecasting.phase10.real_preflight import validate_modeled_silver_source
 from gold_forecasting.phase10.reference import PHASE7_REFERENCE_COMPLETION, PHASE7_REFERENCE_RUN
 
 PROTOCOL = "phase10-silver-modeled-v1"
@@ -57,6 +66,7 @@ _ROOT_FILES = {
     "protocol.md",
     "features.parquet",
     "summary.json",
+    "summary.md",
     "reference_completion.json",
 }
 _FOLD_FILES = {
@@ -260,8 +270,24 @@ def _parse_inventory(completion: dict[str, Any]) -> dict[str, dict[str, Any]]:
     return result
 
 
-def _expected_files(paths: set[str]) -> None:
+def _expected_files(root: Path, paths: set[str]) -> None:
     required = set(_ROOT_FILES)
+    resolved = Phase10Config.model_validate(_json(root / "resolved_config.json"))
+    required.update(
+        {
+            "configs/project_root.yaml",
+            "configs/project_instrument.yaml",
+            "configs/project_features.yaml",
+            "configs/project_labels.yaml",
+            "configs/project_costs.yaml",
+            "configs/project_splits.yaml",
+            "configs/project_model.yaml",
+            "configs/project_backtest.yaml",
+            f"configs/{Path(resolved.features_config).name}",
+            f"configs/{Path(resolved.source_config).name}",
+            f"configs/{Path(resolved.phase7_champion_config).name}",
+        }
+    )
     optional: set[str] = set()
     for year in _YEARS:
         prefix = f"folds/test_{year}/"
@@ -339,13 +365,41 @@ def _identity(
         raise Phase10ArtifactError(
             f"run must have its own identity and {expected_run_status} status"
         )
+
+    resolved = Phase10Config.model_validate(_json(root / "resolved_config.json"))
+    snapshot = Phase10Config.model_validate(_load_yaml_mapping(root / "config.yaml"))
+    _equal(
+        snapshot.model_dump(mode="json"),
+        resolved.model_dump(mode="json"),
+        "config snapshot/resolved config",
+    )
+    config_digest = sha256_file(root / "config.yaml")
+    if run.get("config_sha256") != config_digest:
+        raise Phase10ArtifactError("registry config hash differs from sealed config snapshot")
+
+    source_path = root / "configs" / Path(resolved.source_config).name
+    source = ContextSource.model_validate(_load_yaml_mapping(source_path))
+    validate_modeled_silver_source(source)
+    source_payload = source.model_dump(mode="json")
+    _equal(_json(root / "source_config.json"), source_payload, "source config JSON/YAML")
+
     preflight = _json(root / "preflight.json")
     if (
         preflight.get("status") != "passed"
-        or preflight.get("holdout_opened") is not False
+        or preflight.get("exploratory_ablation_ready") is not True
         or preflight.get("formal_benchmark_ready") is not False
+        or preflight.get("strict_pit_source_ready") is not False
+        or preflight.get("formal_run_opened") is not False
+        or preflight.get("holdout_opened") is not False
+        or preflight.get("champion_changed") is not False
+        or preflight.get("trading_activated") is not False
     ):
         raise Phase10ArtifactError("run lacks passed exploratory-only preflight")
+    if preflight.get("config_sha256") != config_digest:
+        raise Phase10ArtifactError("preflight config hash differs from sealed config snapshot")
+    if preflight.get("source_config_sha256") != sha256_file(source_path):
+        raise Phase10ArtifactError("preflight source hash differs from sealed source config")
+    _equal(preflight.get("source"), source_payload, "preflight/source config")
     for name in ("code_version", "data_version"):
         if not isinstance(summary.get(name), str) or not summary[name]:
             raise Phase10ArtifactError(f"missing run {name}")
@@ -510,7 +564,7 @@ def _validate(
     *,
     expected_run_status: str = "succeeded",
 ) -> dict[str, Any]:
-    _expected_files(set(inventory))
+    _expected_files(root, set(inventory))
     _authenticated_reference(root, inventory)
     summary, _ = _identity(root, expected_run_status=expected_run_status)
     table = _features(root)
