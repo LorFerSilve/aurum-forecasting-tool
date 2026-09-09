@@ -65,9 +65,7 @@ def import_phase10_silver_context(
     selected_years: tuple[int, ...] = (2020, 2021, 2022, 2023, 2024)
     if years is not None:
         try:
-            selected_years = tuple(
-                int(item.strip()) for item in years.split(",") if item.strip()
-            )
+            selected_years = tuple(int(item.strip()) for item in years.split(",") if item.strip())
         except ValueError as exc:
             raise typer.BadParameter("years must be comma-separated integers") from exc
     result = import_histdata_silver_archives(
@@ -95,10 +93,15 @@ def dry_run_phase10_context(
 def validate_phase10_context(
     run_directory: Annotated[Path, typer.Argument(exists=True, file_okay=False)],
 ) -> None:
-    """Verify the synthetic run's artifact integrity and research scope."""
+    """Verify synthetic or exploratory run integrity and its declared research scope."""
+    from gold_forecasting.phase10.artifacts import verify_phase10_run
     from gold_forecasting.phase10.dry_run import verify_context_dry_run
 
-    typer.echo(json.dumps(verify_context_dry_run(run_directory), indent=2))
+    if (run_directory / "run.json").exists():
+        result = verify_phase10_run(run_directory)
+    else:
+        result = verify_context_dry_run(run_directory)
+    typer.echo(json.dumps(result, indent=2))
 
 
 @phase10_app.command("preflight")
@@ -107,23 +110,61 @@ def preflight_phase10_context(
     bundle: Annotated[
         Path | None, typer.Option(help="Optional observation bundle manifest.")
     ] = None,
+    config: Annotated[
+        Path | None, typer.Option(exists=True, dir_okay=False, help="Real-data ablation config.")
+    ] = None,
+    report: Annotated[Path | None, typer.Option(help="Optional real-data JSON report.")] = None,
 ) -> None:
     """Report source-readiness blockers; optional disabled sources are never loaded."""
     from gold_forecasting.phase10.preflight import inspect_context_source
 
-    result = inspect_context_source(source, bundle)
+    if config is not None:
+        from gold_forecasting.phase10.real_preflight import run_phase10_preflight
+
+        if bundle is not None or source != Path("configs/phase10_silver.yaml"):
+            raise typer.BadParameter(
+                "--config uses its own source/bundle; do not mix source options"
+            )
+        try:
+            result = run_phase10_preflight(config, report_path=report)
+        except (OSError, ValueError) as exc:
+            typer.echo(
+                json.dumps(
+                    {
+                        "protocol": "phase10-silver-modeled-v1",
+                        "status": "blocked",
+                        "exploratory_ablation_ready": False,
+                        "holdout_opened": False,
+                        "blockers": [str(exc)],
+                    },
+                    indent=2,
+                )
+            )
+            raise typer.Exit(code=1) from exc
+    else:
+        if report is not None:
+            raise typer.BadParameter("--report requires a real-data --config")
+        result = inspect_context_source(source, bundle)
     typer.echo(json.dumps(result, indent=2))
     if result["status"] == "blocked":
         raise typer.Exit(code=1)
+
+
+@phase10_app.command("run")
+def run_phase10_silver(
+    config: ConfigOption = Path("configs/phase10_silver_ablation.yaml"),
+) -> None:
+    """Run the exploratory silver ablation only after all local integrity gates pass."""
+    from gold_forecasting.phase10.pipeline import run_phase10
+
+    typer.echo(str(run_phase10(config)))
 
 
 @phase9_app.command("dry-run")
 def dry_run_phase9_research(
     output: Annotated[
         Path,
-        typer.Option(
-            help="New destination for the isolated synthetic phase-9 integration run."
-        ),
+        typer.Option(help="New destination for the isolated synthetic phase-9 integration run."),
     ] = Path("reports/phase9_dry_run"),
 ) -> None:
     """Exercise phase-9 end to end without opening a formal benchmark."""
@@ -150,9 +191,7 @@ def preflight_phase9_research(
     config: ConfigOption = Path("configs/phase9.yaml"),
     report: Annotated[
         Path,
-        typer.Option(
-            help="JSON evidence report under reports/; no formal benchmark is started."
-        ),
+        typer.Option(help="JSON evidence report under reports/; no formal benchmark is started."),
     ] = Path("reports/phase9_preflight.json"),
 ) -> None:
     """Run guarded real-data checks without opening the formal Phase-9 benchmark."""
@@ -217,6 +256,7 @@ def validate_phase7_research(
     from gold_forecasting.phase7.pipeline import verify_phase7
 
     typer.echo(json.dumps(verify_phase7(run_directory), indent=2))
+
 
 @benchmark_app.command("run")
 def run_phase6_benchmark(config: ConfigOption = Path("configs/benchmark.yaml")) -> None:
