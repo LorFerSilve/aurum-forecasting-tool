@@ -86,8 +86,8 @@ alle benodigde pathquantielen al cryptografisch geverifieerd waren opgeslagen. D
 post-benchmark audit geeft mean MAE **6.007010 bps** voor direct en **6.001428 bps** voor
 recursive. Dit wijzigt het Phase-9 promotiebesluit niet.
 
-PR #3 kan na groene CI uit draft worden gehaald, maar mag pas na de gebruikelijke
-branch-protection/mergecontrole in `main` worden gemerged.
+PR #3 is in `main` gemerged als `9a15e04`. De onafhankelijke hercontrole op
+2026-09-09 verifieerde opnieuw 225 artefacten en reproduceerde het path-returnauditrapport.
 
 ## Monte Carlo-roadmapbesluit
 

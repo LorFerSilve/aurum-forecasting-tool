@@ -184,6 +184,24 @@ De volledige run schrijft:
 - base- en stressbacktests met beslissingen en trades;
 - één voorbeeldvoorspelling en een atomisch runmanifest.
 
+### Fase 10 — externe context (in ontwikkeling)
+
+De eerste uitvoerbare contextketen bevat een generiek contract met release- en
+revisietijden, gecontroleerde lokale CSV-bundles, backward as-of joins,
+zilverfeatures en expliciete price-only fallback bij bronuitval. Een versieerbare
+eventkalender ondersteunt schemawijzigingen, annuleringen en DST-controles.
+
+```powershell
+.\.venv\Scripts\gold-forecast.exe phase10 preflight
+.\.venv\Scripts\gold-forecast.exe phase10 dry-run --output reports/phase10_dry_run
+.\.venv\Scripts\gold-forecast.exe phase10 validate reports/phase10_dry_run
+```
+
+De proefrun gebruikt uitsluitend synthetische data. `preflight` meldt momenteel
+met exitcode 1 dat de zilverbron uitstaat en de historische beschikbaarheid nog
+niet is bewezen. Er is nog geen formele contextbenchmark of bronpromotie.
+Zie [de implementatiestatus en vervolgstappen](docs/phase10_implementation.md).
+
 ## Kwaliteitscontroles
 
 ```powershell

@@ -26,10 +26,10 @@ Daarna vervangen of versterken we telkens één onderdeel. Na iedere fase blijft
 | Onderdeel | Huidige status |
 |---|---|
 | Systeemontwerp | Afgerond in `project_idea.md` |
-| Roadmap | Fasen 0–9 geverifieerd; fase 10 is de volgende ontwikkelfase |
+| Roadmap | Fasen 0–9 geverifieerd; fase 10 in ontwikkeling |
 | Implementatie | `v0.2.0` blijft champion; Phase-9 direct path is alleen research/distributionele output |
 | Huidige release | `v0.2.0` — betrouwbare price-only researchbenchmark |
-| Eerstvolgende stap | Phase 9 branch afronden/mergen en daarna fase 10 openen |
+| Eerstvolgende stap | Fase 10: contextketen verifiëren, zilverbron kwalificeren en markt-ablation voorbereiden |
 | Monte Carlo | Voorstel geaccepteerd; predictive MC in fase 12 na OOF/calibratie, strategy MC in fase 13 |
 | Standaard einddoel | Professioneel paper-trading-systeem |
 | Echte orders | Afzonderlijke, optionele laatste fase |
@@ -1093,14 +1093,14 @@ Een kleine set economisch plausibele contextvariabelen toevoegen, één bron teg
 
 ### Implementeren
 
-- [ ] Maak een generiek contract voor externe tijdreeksen.
-- [ ] Bewaar observatietijd én `available_at`.
-- [ ] Voeg `age_seconds`, `is_stale` en `is_missing` toe.
-- [ ] Gebruik backward as-of joins.
+- [x] Maak een generiek contract voor externe tijdreeksen.
+- [x] Bewaar observatietijd én `available_at`.
+- [x] Voeg `age_seconds`, `is_stale` en `is_missing` toe.
+- [x] Gebruik backward as-of joins.
 - [ ] Leg markturen en publicatievertraging per bron vast.
-- [ ] Voeg prijs-, momentum- en rolling-correlationfeatures toe.
-- [ ] Voeg tijd tot en sinds high-impact events toe.
-- [ ] Markeer voor-, tijdens- en na-eventregimes.
+- [x] Voeg prijs-, momentum- en rolling-correlationfeatures toe.
+- [x] Voeg tijd tot en sinds high-impact events toe.
+- [x] Markeer voor-, tijdens- en na-eventregimes.
 - [ ] Gebruik historische consensus/surprise alleen wanneer betrouwbare point-in-time snapshots bestaan.
 - [ ] Laat de pipeline ook zonder iedere externe bron werken.
 
@@ -1118,11 +1118,20 @@ Nieuws-NLP, social sentiment en brede alternatieve datasets blijven uitgesteld. 
 
 ### Verificatie
 
-- [ ] Een observatie die na prediction time beschikbaar kwam, wordt nooit gekoppeld.
-- [ ] Zomer- en wintertijd rond eventpublicaties zijn getest.
-- [ ] Forward-filled waarden worden zichtbaar ouder.
-- [ ] Een ontbrekende bron blokkeert of degradeert volgens expliciet beleid.
-- [ ] Geen gereviseerde macro-observatie wordt als oorspronkelijke realtimewaarde behandeld.
+- [x] Een observatie die na prediction time beschikbaar kwam, wordt nooit gekoppeld.
+- [x] Zomer- en wintertijd rond eventpublicaties zijn getest.
+- [x] Forward-filled waarden worden zichtbaar ouder.
+- [x] Een ontbrekende bron blokkeert of degradeert volgens expliciet beleid.
+- [x] Geen gereviseerde macro-observatie wordt als oorspronkelijke realtimewaarde behandeld.
+
+### Implementatiestatus — 2026-09-09
+
+De contextbasis en synthetische verticale keten zijn gebouwd. Revisies worden
+alleen vanaf hun eigen beschikbaarheidstijd zichtbaar; bronuitval heeft een
+expliciete fallback. HistData-zilver blijft uitgeschakeld omdat historische
+publicatie-/revisietijden nog niet bewezen zijn. Er is nog geen formele
+markt-ablation, contextpromotie of `v0.3`-release. Zie
+[de implementatiestatus](docs/phase10_implementation.md) voor scope en vervolgstappen.
 
 ### Exitcriteria
 

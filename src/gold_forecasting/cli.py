@@ -15,6 +15,7 @@ benchmark_app = typer.Typer(help="Run the guarded phase-6 multi-horizon benchmar
 phase7_app = typer.Typer(help="Run phase-7 richer price-only feature ablations.")
 phase8_app = typer.Typer(help="Run the guarded phase-8 multi-timeframe neural challenger.")
 phase9_app = typer.Typer(help="Develop and verify the phase-9 future-path challenger.")
+phase10_app = typer.Typer(help="Build and inspect point-in-time external context research.")
 
 app.add_typer(config_app, name="config")
 app.add_typer(data_app, name="data")
@@ -24,6 +25,7 @@ app.add_typer(benchmark_app, name="benchmark")
 app.add_typer(phase7_app, name="phase7")
 app.add_typer(phase8_app, name="phase8")
 app.add_typer(phase9_app, name="phase9")
+app.add_typer(phase10_app, name="phase10")
 
 ConfigOption = Annotated[
     Path,
@@ -37,6 +39,44 @@ YearsOption = Annotated[
     str | None,
     typer.Option(help="Optional comma-separated development years, for example 2023,2024."),
 ]
+
+
+@phase10_app.command("dry-run")
+def dry_run_phase10_context(
+    output: Annotated[
+        Path, typer.Option(help="New destination for a synthetic context integration run.")
+    ] = Path("reports/phase10_dry_run"),
+) -> None:
+    """Exercise ingestion, context joins, features and an isolated synthetic ablation."""
+    from gold_forecasting.phase10.dry_run import run_context_dry_run
+
+    typer.echo(json.dumps(run_context_dry_run(output), indent=2))
+
+
+@phase10_app.command("validate")
+def validate_phase10_context(
+    run_directory: Annotated[Path, typer.Argument(exists=True, file_okay=False)],
+) -> None:
+    """Verify the synthetic run's artifact integrity and research scope."""
+    from gold_forecasting.phase10.dry_run import verify_context_dry_run
+
+    typer.echo(json.dumps(verify_context_dry_run(run_directory), indent=2))
+
+
+@phase10_app.command("preflight")
+def preflight_phase10_context(
+    source: ConfigOption = Path("configs/phase10_silver.yaml"),
+    bundle: Annotated[
+        Path | None, typer.Option(help="Optional observation bundle manifest.")
+    ] = None,
+) -> None:
+    """Report source-readiness blockers; optional disabled sources are never loaded."""
+    from gold_forecasting.phase10.preflight import inspect_context_source
+
+    result = inspect_context_source(source, bundle)
+    typer.echo(json.dumps(result, indent=2))
+    if result["status"] == "blocked":
+        raise typer.Exit(code=1)
 
 
 @phase9_app.command("dry-run")

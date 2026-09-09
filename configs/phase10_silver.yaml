@@ -1,0 +1,16 @@
+source_id: silver
+description: HistData XAGUSD M1 candidate; modeled availability research only
+source_url: https://www.histdata.com/f-a-q/data-files-detailed-specification/
+market_hours: OTC vendor quote stream; gaps and market closures stay missing/stale
+source_timezone: Fixed UTC-05:00 without daylight saving time
+publication_delay_seconds: 60
+stale_after_seconds: 600
+availability_basis: modeled_latency
+revision_policy: append_only
+availability_evidence: >-
+  The project interprets M1 bid OHLC timestamps as candle opens; the source
+  does not explicitly prove that convention or historical per-row release or
+  revision times. Candle close plus 60 seconds is an unverified research
+  assumption; current download time is stored separately as ingested_at_utc.
+missing_policy: price_only_fallback
+enabled: false
