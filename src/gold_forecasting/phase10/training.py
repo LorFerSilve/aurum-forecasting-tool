@@ -289,6 +289,7 @@ def evaluate_silver_fold(
         reloaded = route_silver_predictions(test, reference_records, joblib.load(checkpoint))
         if not predicted.equals(reloaded):
             raise ValueError("saved silver model prediction parity failed")
+    training_audit["selected_spec"] = selected["spec"]
     training_audit["checkpoint_prediction_parity"] = True
     training_audit["context"] = context_coverage(train)
     write_json_atomic(directory / "training_audit.json", training_audit)

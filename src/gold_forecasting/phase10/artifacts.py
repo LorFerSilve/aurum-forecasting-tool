@@ -157,7 +157,12 @@ def _same_frame(actual: pd.DataFrame, expected: pd.DataFrame, context: str) -> N
 
 def context_summary(frame: pd.DataFrame) -> dict[str, Any]:
     """Summarize routing, including feature warm-up and observed age distribution."""
-    for column in ("silver_usable", "silver_is_missing", "silver_is_stale"):
+    for column in (
+        "silver_usable",
+        "silver_is_missing",
+        "silver_is_stale",
+        "used_price_only_fallback",
+    ):
         if (
             column not in frame
             or not is_bool_dtype(frame[column].dtype)
@@ -167,8 +172,11 @@ def context_summary(frame: pd.DataFrame) -> dict[str, Any]:
     usable = frame["silver_usable"]
     missing = frame["silver_is_missing"]
     stale = frame["silver_is_stale"]
+    fallback = frame["used_price_only_fallback"]
     if (usable & (missing | stale)).any():
         raise Phase10ArtifactError("missing/stale source marked usable")
+    if ((~usable) & (~fallback)).any():
+        raise Phase10ArtifactError("unusable silver context bypassed the frozen fallback")
     ages = frame["silver_age_seconds"].dropna().astype(float)
     if not np.isfinite(ages).all() or (ages < 0).any():
         raise Phase10ArtifactError("invalid silver ages")
@@ -178,8 +186,8 @@ def context_summary(frame: pd.DataFrame) -> dict[str, Any]:
         "missing_rows": int(missing.sum()),
         "stale_rows": int(stale.sum()),
         "insufficient_history_rows": int((~usable & ~missing & ~stale).sum()),
-        "fallback_rows": int((~usable).sum()),
-        "fallback_fraction": float((~usable).mean()) if len(frame) else 0.0,
+        "fallback_rows": int(fallback.sum()),
+        "fallback_fraction": float(fallback.mean()) if len(frame) else 0.0,
         "usable_fraction": float(usable.mean()) if len(frame) else 0.0,
         "age_seconds": {
             "maximum": float(ages.max()) if len(ages) else None,
@@ -447,14 +455,16 @@ def _fallback(silver: pd.DataFrame, reference: pd.DataFrame, block: pd.DataFrame
     for name in ("silver_usable", "used_price_only_fallback"):
         if name not in silver or not is_bool_dtype(silver[name]) or silver[name].isna().any():
             raise Phase10ArtifactError(f"fallback needs boolean {name}")
-    expected = ~block["silver_usable"].to_numpy()
-    if not np.array_equal(silver["used_price_only_fallback"].to_numpy(), expected):
-        raise Phase10ArtifactError("fallback routing differs from usable context")
-    if not np.array_equal(silver["silver_usable"].to_numpy(), ~expected):
+    usable = block["silver_usable"].to_numpy(dtype=bool)
+    recorded_usable = silver["silver_usable"].to_numpy(dtype=bool)
+    fallback = silver["used_price_only_fallback"].to_numpy(dtype=bool)
+    if not np.array_equal(recorded_usable, usable):
         raise Phase10ArtifactError("silver usable routing differs from feature history")
+    if ((~usable) & (~fallback)).any():
+        raise Phase10ArtifactError("unusable silver context bypassed the frozen fallback")
     _same_frame(
-        silver.loc[expected, _PREDICTION_VALUES],
-        reference.loc[expected, _PREDICTION_VALUES],
+        silver.loc[fallback, _PREDICTION_VALUES],
+        reference.loc[fallback, _PREDICTION_VALUES],
         "exact frozen price-only fallback",
     )
 
@@ -551,6 +561,76 @@ def _fold(root: Path, table: pd.DataFrame, fold: WalkForwardFold) -> dict[str, A
         _fallback(silver, reference, block)
         inner_records.append(silver)
     selection = _json(directory / "selection.json")
+    candidates = selection.get("candidates")
+    if not isinstance(candidates, list) or len(candidates) != 3:
+        raise Phase10ArtifactError("silver selection requires exactly three frozen candidates")
+    expected_specs = [
+        {"family": "logistic", "value": value}
+        for value in (0.1, 1.0, 10.0)
+    ]
+    if [candidate.get("spec") for candidate in candidates] != expected_specs:
+        raise Phase10ArtifactError("silver logistic C-grid differs from frozen Phase-7")
+    if any(candidate.get("class_weight") != "balanced" for candidate in candidates):
+        raise Phase10ArtifactError("silver class weighting differs from frozen Phase-7")
+    for candidate in candidates:
+        scores = candidate.get("folds")
+        if not isinstance(scores, list) or len(scores) != len(fold.inner_folds):
+            raise Phase10ArtifactError("silver candidate inner-fold evidence is incomplete")
+        mean_f1 = float(np.mean([score["metrics"]["macro_f1"] for score in scores]))
+        mean_loss = float(np.mean([score["metrics"]["log_loss"] for score in scores]))
+        _equal(candidate.get("mean_macro_f1"), mean_f1, "candidate mean macro-F1")
+        _equal(candidate.get("mean_log_loss"), mean_loss, "candidate mean log loss")
+    selected = min(
+        candidates,
+        key=lambda candidate: (
+            -candidate["mean_macro_f1"],
+            candidate["mean_log_loss"],
+        ),
+    )
+    _equal(selection.get("selected_name"), selected.get("name"), "selected candidate name")
+    _equal(selection.get("selected_spec"), selected.get("spec"), "selected candidate spec")
+    _equal(selection.get("class_weight"), "balanced", "selected class weighting")
+    _equal(
+        selection.get("calibration_status"),
+        "reserved_not_fitted",
+        "calibration isolation",
+    )
+    selected_scores = selected["folds"]
+    for index, (record, score) in enumerate(
+        zip(inner_records, selected_scores, strict=True)
+    ):
+        _equal(
+            score.get("metrics"),
+            _metrics(record),
+            f"selected inner metrics/{index}",
+        )
+        _equal(
+            score.get("validation_rows"),
+            len(record),
+            f"selected inner rows/{index}",
+        )
+        _equal(
+            score.get("validation_sample_digest"),
+            sample_id_digest(record["sample_id"]),
+            f"selected inner digest/{index}",
+        )
+        _equal(
+            score.get("context"),
+            context_summary(record),
+            f"selected inner context/{index}",
+        )
+
+    training = _json(directory / "training_audit.json")
+    _equal(training.get("selected_spec"), selected.get("spec"), "final selected model spec")
+    if training.get("class_weight") != "balanced":
+        raise Phase10ArtifactError("final silver model class weighting differs")
+    checkpoint = directory / "final_model.joblib"
+    fitted = training.get("model_fitted")
+    if not isinstance(fitted, bool) or checkpoint.is_file() != fitted:
+        raise Phase10ArtifactError("final model checkpoint presence differs from fit audit")
+    if training.get("checkpoint_prediction_parity") is not True:
+        raise Phase10ArtifactError("final model checkpoint prediction parity is unproven")
+
     policy, attempts = select_policy(inner_records, minimum_trades=20)
     _equal(selection["selected_policy"], asdict(policy), "inner-only policy selection")
     _equal(selection["policy_candidates"], attempts, "policy candidates replay")
