@@ -359,7 +359,7 @@ def import_histdata_silver_archives(
         data_path = destination / data_name
         write_parquet_atomic(data_path, observations)
         start = observations["observed_at_utc"].min()
-        end = observations["observed_at_utc"].max() + pd.Timedelta(nanoseconds=1)
+        end = observations["observed_at_utc"].max() + pd.Timedelta(1, unit="ns")
         write_json_atomic(
             destination / manifest_name,
             {
