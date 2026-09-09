@@ -8,9 +8,12 @@ from pathlib import Path
 
 import pandas as pd
 import pytest
+from typer.testing import CliRunner
 
+from gold_forecasting.cli import app
 from gold_forecasting.phase10.bundle import load_context_data
 from gold_forecasting.phase10.contracts import ContextSource
+from gold_forecasting.phase10.preflight import inspect_context_source
 from gold_forecasting.phase10.silver_histdata import (
     SilverHistDataError,
     import_histdata_silver_archives,
@@ -191,3 +194,66 @@ def test_import_refuses_overwrite(tmp_path: Path) -> None:
             years=(2020,),
             ingested_at_utc=pd.Timestamp("2026-09-09T00:00:00Z"),
         )
+
+
+def test_imported_modeled_bundle_is_exploratory_not_strict_pit(tmp_path: Path) -> None:
+    raw = tmp_path / "raw"
+    raw.mkdir()
+    _zip(raw / "HISTDATA_COM_ASCII_XAGUSD_M1_2020.zip")
+    output = tmp_path / "context"
+    source_path = (
+        Path(__file__).resolve().parents[1]
+        / "configs"
+        / "phase10_silver_exploratory.yaml"
+    )
+
+    import_histdata_silver_archives(
+        raw,
+        output,
+        _source(),
+        years=(2020,),
+        ingested_at_utc=pd.Timestamp("2026-09-09T00:00:00Z"),
+    )
+    result = inspect_context_source(
+        source_path,
+        output / "silver.bundle-set.json",
+    )
+
+    assert result["status"] == "ready_for_exploratory_ablation"
+    assert result["exploratory_ablation_ready"] is True
+    assert result["strict_pit_source_ready"] is False
+    assert result["formal_benchmark_ready"] is False
+    assert result["formal_blockers"] == ["historical_release_evidence_unproven"]
+    assert result["observation_rows"] == 2
+
+
+def test_cli_imports_local_xagusd_archive(tmp_path: Path) -> None:
+    raw = tmp_path / "raw"
+    raw.mkdir()
+    _zip(raw / "HISTDATA_COM_ASCII_XAGUSD_M1_2020.zip")
+    output = tmp_path / "context"
+    source_path = (
+        Path(__file__).resolve().parents[1]
+        / "configs"
+        / "phase10_silver_exploratory.yaml"
+    )
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "phase10",
+            "silver-import",
+            "--archive-directory",
+            str(raw),
+            "--output",
+            str(output),
+            "--source",
+            str(source_path),
+            "--years",
+            "2020",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert (output / "silver.bundle-set.json").is_file()
+    assert (output / "silver-2020.parquet").is_file()
