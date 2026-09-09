@@ -88,7 +88,7 @@ class ContextBundleManifest(BaseModel):
         )
 
     @model_validator(mode="after")
-    def _format_matches_suffix(self) -> "ContextBundleManifest":
+    def _format_matches_suffix(self) -> ContextBundleManifest:
         expected = ".csv" if self.format == "csv" else ".parquet"
         if not self.file.endswith(expected):
             raise ValueError(f"bundle format={self.format!r} requires a {expected} file")
@@ -232,7 +232,7 @@ def load_context_bundle(
         raise ValueError(f"context {manifest.format.upper()} SHA-256 differs from bundle manifest")
     frame = _load_csv(payload) if manifest.format == "csv" else _load_parquet(payload)
     if len(frame) != manifest.row_count:
-        raise ValueError(f"context {manifest.format.upper()} row_count differs from bundle manifest")
+        raise ValueError(\n            f"context {manifest.format.upper()} row_count differs from bundle manifest"\n        )
     result = validate_observations(frame, source)
     if (
         (result["observed_at_utc"] < start)
