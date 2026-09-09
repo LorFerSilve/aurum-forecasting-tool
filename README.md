@@ -187,9 +187,10 @@ De volledige run schrijft:
 ### Fase 10 — externe context (in ontwikkeling)
 
 De eerste uitvoerbare contextketen bevat een generiek contract met release- en
-revisietijden, gecontroleerde lokale CSV-bundles, backward as-of joins,
-zilverfeatures en expliciete price-only fallback bij bronuitval. Een versieerbare
-eventkalender ondersteunt schemawijzigingen, annuleringen en DST-controles.
+revisietijden, gecontroleerde lokale CSV/Parquet-bundles, backward as-of joins,
+zilverfeatures en expliciete price-only fallback bij bronuitval. Real-data context
+kan als jaarlijkse Parquet-partities in een geauthenticeerde bundle-set worden bewaard.
+Een versieerbare eventkalender ondersteunt schemawijzigingen, annuleringen en DST-controles.
 
 ```powershell
 .\.venv\Scripts\gold-forecast.exe phase10 preflight
@@ -197,10 +198,12 @@ eventkalender ondersteunt schemawijzigingen, annuleringen en DST-controles.
 .\.venv\Scripts\gold-forecast.exe phase10 validate reports/phase10_dry_run
 ```
 
-De proefrun gebruikt uitsluitend synthetische data. `preflight` meldt momenteel
-met exitcode 1 dat de zilverbron uitstaat en de historische beschikbaarheid nog
-niet is bewezen. Er is nog geen formele contextbenchmark of bronpromotie.
-Zie [de implementatiestatus en vervolgstappen](docs/phase10_implementation.md).
+De proefrun gebruikt uitsluitend synthetische data. De strict silver-config blijft
+bewust geblokkeerd. Een aparte exploratory config kan lokale XAGUSD-archieven importeren
+met modeled availability (candle close + 60s); zo'n run kan nooit strict-PIT admission
+of championpromotie activeren. Er is nog geen formele contextbenchmark of bronpromotie.
+Zie [het Phase-10 protocol](docs/research_protocol_phase10.md) en
+[de implementatiestatus](docs/phase10_implementation.md).
 
 ## Kwaliteitscontroles
 
