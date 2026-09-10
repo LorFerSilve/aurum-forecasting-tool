@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import shutil
 from dataclasses import replace
@@ -23,13 +24,13 @@ from gold_forecasting.phase10 import artifacts
 from gold_forecasting.phase10.config import load_phase10_config
 from gold_forecasting.phase10.contracts import load_source
 from gold_forecasting.phase10.profiles import RATE_PROFILE
+from gold_forecasting.phase10.rate_fred import FRED_RATE_FILENAME, import_fred_dfii10
 from gold_forecasting.phase10.real_preflight import (
     Phase10PreflightError,
     inspect_context_metadata,
     load_verified_context,
     validate_modeled_context_source,
 )
-from gold_forecasting.phase10.rate_fred import FRED_RATE_FILENAME, import_fred_dfii10
 from gold_forecasting.phase10.training import (
     context_usable_mask,
     evaluate_context_fold,
@@ -85,9 +86,7 @@ def _table() -> pd.DataFrame:
         }
     )
     table["sample_id"] = [
-        __import__("hashlib").sha256(
-            f"XAU_USD|synthetic|{stamp.isoformat()}|15".encode()
-        ).hexdigest()
+        hashlib.sha256(f"XAU_USD|synthetic|{stamp.isoformat()}|15".encode()).hexdigest()
         for stamp in times
     ]
     for name in PRICE_NAMES:
