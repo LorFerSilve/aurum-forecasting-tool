@@ -1,0 +1,19 @@
+source_id: rate
+description: FRED DFII10 daily 10-year TIPS real-yield observations for the Phase-10 rate hypothesis
+source_url: https://fred.stlouisfed.org/series/DFII10
+market_hours: H.15 daily release; latest reference-day observation is carried only within the frozen stale window
+source_timezone: America/New_York release schedule; DST-aware
+publication_delay_seconds: 0
+stale_after_seconds: 432000
+availability_basis: modeled_latency
+revision_policy: append_only
+availability_evidence: >-
+  Exploratory only. DFII10 is the Board of Governors H.15 daily 10-year inflation-indexed
+  Treasury constant-maturity yield distributed through FRED. H.15 is scheduled for 4:15pm
+  America/New_York on Federal Reserve business days, and the current release normally exposes
+  the prior business day's observation. The importer therefore models each reference date as
+  available at the next U.S. federal business day at 16:15 America/New_York. FRED historical
+  values are subject to revision and the downloaded snapshot does not preserve per-row vintages,
+  so these modeled timestamps are not strict historical point-in-time evidence.
+missing_policy: price_only_fallback
+enabled: true
