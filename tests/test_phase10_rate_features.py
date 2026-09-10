@@ -8,6 +8,13 @@ import pytest
 
 from gold_forecasting.phase10.rate_features import RATE_MODEL_FEATURES, build_rate_features
 
+_DERIVED = (
+    "rate_level_pct",
+    "rate_change_1obs_bps",
+    "rate_change_5obs_bps",
+    "rate_change_20obs_bps",
+)
+
 
 def _frame(observations: int = 25, repeats: int = 2) -> pd.DataFrame:
     ids: list[str] = []
@@ -51,16 +58,22 @@ def test_rate_changes_use_distinct_daily_observations_not_intraday_repetitions()
 def test_rate_history_warmup_and_staleness_route_features_to_missing() -> None:
     frame = _frame()
     result = build_rate_features(frame)
-    assert result.loc[result.rate_observation_id == "dfii10-2020-01-01", "rate_change_1obs_bps"].isna().all()
-    assert result.loc[result.rate_observation_id == "dfii10-2020-01-05", "rate_change_5obs_bps"].isna().all()
-    assert result.loc[result.rate_observation_id == "dfii10-2020-01-20", "rate_change_20obs_bps"].isna().all()
+    assert result.loc[
+        result.rate_observation_id == "dfii10-2020-01-01", "rate_change_1obs_bps"
+    ].isna().all()
+    assert result.loc[
+        result.rate_observation_id == "dfii10-2020-01-05", "rate_change_5obs_bps"
+    ].isna().all()
+    assert result.loc[
+        result.rate_observation_id == "dfii10-2020-01-20", "rate_change_20obs_bps"
+    ].isna().all()
 
     stale = frame.copy()
     stale.loc[stale.rate_observation_id == "dfii10-2020-01-25", "rate_is_stale"] = True
     masked = build_rate_features(stale)
-    assert masked.loc[
-        masked.rate_observation_id == "dfii10-2020-01-25", list(RATE_MODEL_FEATURES)
-    ].isna().all().all()
+    rows = masked.rate_observation_id == "dfii10-2020-01-25"
+    assert masked.loc[rows, list(_DERIVED)].isna().all().all()
+    assert masked.loc[rows, "rate_age_seconds"].eq(3600.0).all()
 
 
 def test_future_rate_value_cannot_rewrite_earlier_feature_rows() -> None:
