@@ -37,9 +37,16 @@ from gold_forecasting.phase10.contracts import (
 )
 from gold_forecasting.phase10.point_in_time import context_coverage, join_context
 from gold_forecasting.phase10.profiles import (
+    RATE_PROFILE,
     SILVER_PROFILE,
     ContextProfile,
     profile_for_source,
+)
+from gold_forecasting.phase10.rate_fred import (
+    FRED_RATE_FILENAME,
+    FRED_RATE_SERIES,
+    FRED_RATE_SOURCE_URL,
+    parse_fred_dfii10_csv,
 )
 from gold_forecasting.phase10.reference import (
     Phase10Reference,
@@ -50,6 +57,7 @@ from gold_forecasting.phase10.silver_histdata import parse_histdata_xagusd_archi
 from gold_forecasting.registry import get_git_code_version
 
 SILVER_MODEL_FEATURES = SILVER_PROFILE.model_features
+RATE_MODEL_FEATURES = RATE_PROFILE.model_features
 _YEARS = (2020, 2021, 2022, 2023, 2024)
 _MAX_METADATA = 1024 * 1024
 
@@ -80,42 +88,55 @@ def _unredirected(path: Path, root: Path) -> Path:
 
 
 def _json_metadata(path: Path) -> tuple[dict[str, Any], str]:
-    payload = _read_bounded(path, _MAX_METADATA, "silver provenance metadata")
+    payload = _read_bounded(path, _MAX_METADATA, "context provenance metadata")
     try:
         decoded = json.loads(payload)
     except (ValueError, UnicodeError) as exc:
-        raise Phase10PreflightError(f"invalid silver metadata: {path}") from exc
+        raise Phase10PreflightError(f"invalid context metadata: {path}") from exc
     if not isinstance(decoded, dict):
-        raise Phase10PreflightError("silver metadata must contain a JSON object")
+        raise Phase10PreflightError("context metadata must contain a JSON object")
     return decoded, hashlib.sha256(payload).hexdigest()
 
 
 def validate_modeled_context_source(source: ContextSource, profile: ContextProfile) -> None:
-    """The separately frozen modeled protocol cannot be weakened by source config."""
-    expected = {
-        "source_id": profile.source_id,
-        "enabled": True,
-        "availability_basis": "modeled_latency",
-        "publication_delay_seconds": 60,
-        "stale_after_seconds": 600,
-        "revision_policy": "append_only",
-        "missing_policy": "price_only_fallback",
-        "source_timezone": "Fixed UTC-05:00 without daylight saving time",
-        "source_url": "https://www.histdata.com/f-a-q/data-files-detailed-specification/",
-    }
+    """A frozen modeled protocol cannot be weakened by source configuration."""
+    if profile.source_id in {"silver", "dollar"}:
+        expected: dict[str, object] = {
+            "source_id": profile.source_id,
+            "enabled": True,
+            "availability_basis": "modeled_latency",
+            "publication_delay_seconds": 60,
+            "stale_after_seconds": 600,
+            "revision_policy": "append_only",
+            "missing_policy": "price_only_fallback",
+            "source_timezone": "Fixed UTC-05:00 without daylight saving time",
+            "source_url": "https://www.histdata.com/f-a-q/data-files-detailed-specification/",
+        }
+    elif profile.source_id == "rate":
+        expected = {
+            "source_id": "rate",
+            "enabled": True,
+            "availability_basis": "modeled_latency",
+            "publication_delay_seconds": 0,
+            "stale_after_seconds": 432000,
+            "revision_policy": "append_only",
+            "missing_policy": "price_only_fallback",
+            "source_timezone": "America/New_York release schedule; DST-aware",
+            "source_url": FRED_RATE_SOURCE_URL,
+        }
+    else:
+        raise Phase10PreflightError(f"unsupported modeled Phase-10 source: {profile.source_id}")
     for key, value in expected.items():
         if getattr(source, key) != value:
-            raise Phase10PreflightError(f"frozen modeled silver source mismatch: {key}")
+            raise Phase10PreflightError(f"frozen modeled source mismatch: {key}")
 
 
-def inspect_context_metadata(
+def _inspect_histdata_metadata(
     root: Path,
     config: Phase10Config,
     source: ContextSource,
 ) -> dict[str, Any]:
-    """Inspect *all* annual metadata before opening any ZIP or observation payload."""
     profile = config.profile
-    validate_modeled_context_source(source, profile)
     root = root.resolve()
     set_path = _unredirected(root / config.bundle_path, root)
     archive_root = _unredirected(root / config.archive_directory, root)
@@ -199,7 +220,6 @@ def inspect_context_metadata(
         member_names = record.get("members")
         if not isinstance(member_names, list) or not member_names:
             raise Phase10PreflightError("silver source archive member evidence is missing")
-        # Do not hash a source archive until every annual manifest passes its scope guard.
         partition_path = _unredirected(set_path.parent / name, root)
         partition, partition_hash = _json_metadata(partition_path)
         item = ContextBundleManifest.model_validate(partition)
@@ -236,6 +256,161 @@ def inspect_context_metadata(
     }
 
 
+def _inspect_rate_metadata(
+    root: Path,
+    config: Phase10Config,
+    source: ContextSource,
+) -> dict[str, Any]:
+    root = root.resolve()
+    set_path = _unredirected(root / config.bundle_path, root)
+    raw_root = _unredirected(root / config.archive_directory, root)
+    bundle_set, set_hash = _json_metadata(set_path)
+    manifest = ContextBundleSetManifest.model_validate_json(json.dumps(bundle_set))
+    expected_names = tuple(f"rate-{year}.manifest.json" for year in _YEARS)
+    if (
+        manifest.source_id != "rate"
+        or manifest.availability_basis != "modeled_latency"
+        or manifest.bundles != expected_names
+    ):
+        raise Phase10PreflightError("rate bundle-set must contain exactly annual 2020-2024 bundles")
+    artifacts_path = _unredirected(set_path.parent / "source_artifacts.json", root)
+    provenance, provenance_hash = _json_metadata(artifacts_path)
+    expected_top = {
+        "schema_version": 1,
+        "source_id": "rate",
+        "series_id": FRED_RATE_SERIES,
+        "availability_basis": "modeled_latency",
+        "availability_is_historical_evidence": False,
+        "years": list(_YEARS),
+    }
+    if any(
+        provenance.get(key) != value or type(provenance.get(key)) is not type(value)
+        for key, value in expected_top.items()
+    ):
+        raise Phase10PreflightError("rate source metadata exposes unexpected source/year")
+    record = provenance.get("source_file")
+    if not isinstance(record, dict):
+        raise Phase10PreflightError("rate metadata requires one authenticated source_file record")
+    expected_record = {
+        "filename": FRED_RATE_FILENAME,
+        "series_id": FRED_RATE_SERIES,
+        "source_url": FRED_RATE_SOURCE_URL,
+        "availability_basis": "modeled_latency",
+        "availability_is_historical_evidence": False,
+        "reference_time_semantics": "reference_date_00:00_UTC",
+        "release_schedule": "16:15 America/New_York",
+        "release_rule": "next_us_federal_business_day_16:15_America/New_York",
+        "revision_snapshot": "latest_downloaded_history_no_vintages",
+        "first_reference_date": "2020-01-01",
+        "last_reference_date": "2024-12-31",
+    }
+    for key, value in expected_record.items():
+        if record.get(key) != value:
+            raise Phase10PreflightError(f"rate source metadata differs from frozen contract: {key}")
+    for key in ("size_bytes", "raw_rows", "missing_rows_skipped", "rows"):
+        if type(record.get(key)) is not int or record[key] < 0:
+            raise Phase10PreflightError(f"rate source metadata requires integer {key}")
+    if record["size_bytes"] <= 0 or record["rows"] <= 0:
+        raise Phase10PreflightError("rate source file must contain positive bytes and observations")
+    digest = record.get("sha256")
+    if (
+        not isinstance(digest, str)
+        or len(digest) != 64
+        or any(character not in "0123456789abcdef" for character in digest)
+    ):
+        raise Phase10PreflightError("rate source SHA-256 is invalid")
+    raw_path = _unredirected(raw_root / FRED_RATE_FILENAME, root)
+    if Path(str(record.get("path"))).absolute() != raw_path:
+        raise Phase10PreflightError("rate source path differs from configured source file")
+    if not raw_path.is_file():
+        raise Phase10PreflightError(f"required local DFII10 source is missing: {raw_path}")
+    year_rows = record.get("year_rows")
+    if not isinstance(year_rows, dict) or set(year_rows) != {str(year) for year in _YEARS}:
+        raise Phase10PreflightError("rate metadata requires exact annual row counts for 2020-2024")
+
+    bundles: list[dict[str, Any]] = []
+    for year, name in zip(_YEARS, expected_names, strict=True):
+        if type(year_rows[str(year)]) is not int or year_rows[str(year)] <= 0:
+            raise Phase10PreflightError("rate annual row counts must be positive integers")
+        partition_path = _unredirected(set_path.parent / name, root)
+        partition, partition_hash = _json_metadata(partition_path)
+        item = ContextBundleManifest.model_validate(partition)
+        start = pd.Timestamp(item.observation_start_utc)
+        end = pd.Timestamp(item.observation_end_utc)
+        if not DEVELOPMENT_START <= start < end <= DEVELOPMENT_END:
+            raise Phase10PreflightError("rate bundle span must remain in development 2020-2024")
+        if (
+            item.source_id != "rate"
+            or item.availability_basis != "modeled_latency"
+            or item.format != "parquet"
+            or item.file != f"rate-{year}.parquet"
+            or item.row_count != year_rows[str(year)]
+        ):
+            raise Phase10PreflightError("rate annual bundle identity/rows differ from provenance")
+        _unredirected(set_path.parent / item.file, root)
+        bundles.append(
+            {
+                "year": year,
+                "manifest_path": str(partition_path),
+                "manifest_sha256": partition_hash,
+                "data_file": item.file,
+                "data_sha256": item.sha256,
+            }
+        )
+    if sum(int(year_rows[str(year)]) for year in _YEARS) != record["rows"]:
+        raise Phase10PreflightError("rate annual rows do not sum to source row count")
+    return {
+        "bundle_set": str(set_path),
+        "bundle_set_sha256": set_hash,
+        "source_artifacts": str(artifacts_path),
+        "source_artifacts_sha256": provenance_hash,
+        "source_file": record,
+        "bundles": bundles,
+    }
+
+
+def inspect_context_metadata(
+    root: Path,
+    config: Phase10Config,
+    source: ContextSource,
+) -> dict[str, Any]:
+    """Inspect all source metadata before opening authenticated observation payloads."""
+    profile = config.profile
+    validate_modeled_context_source(source, profile)
+    if profile.source_id == "rate":
+        return _inspect_rate_metadata(root, config, source)
+    return _inspect_histdata_metadata(root, config, source)
+
+
+def _load_verified_rate(
+    root: Path,
+    config: Phase10Config,
+    source: ContextSource,
+    evidence: dict[str, Any],
+) -> pd.DataFrame:
+    record = evidence["source_file"]
+    reparsed, actual = parse_fred_dfii10_csv(
+        record["path"],
+        source=source,
+        ingested_at_utc=pd.Timestamp(record["ingested_at_utc"]),
+    )
+    if json.dumps(actual, sort_keys=True) != json.dumps(record, sort_keys=True):
+        raise Phase10PreflightError("rate source hash/metadata differs from original bytes")
+    frames: list[pd.DataFrame] = []
+    for bundle in evidence["bundles"]:
+        year = bundle["year"]
+        expected = reparsed.loc[reparsed["observed_at_utc"].dt.year.eq(year)].reset_index(drop=True)
+        loaded = load_context_bundle(bundle["manifest_path"], source)
+        try:
+            pd.testing.assert_frame_equal(loaded, expected, check_exact=True)
+        except AssertionError as exc:
+            raise Phase10PreflightError(
+                "rate bundle observations differ from authenticated DFII10 source file"
+            ) from exc
+        frames.append(loaded)
+    return validate_observations(pd.concat(frames, ignore_index=True), source)
+
+
 def load_verified_context(
     root: Path,
     config: Phase10Config,
@@ -243,47 +418,49 @@ def load_verified_context(
     *,
     metadata: dict[str, Any] | None = None,
 ) -> tuple[pd.DataFrame, dict[str, Any]]:
-    """Reparse authenticated XAGUSD ZIP bytes and require exact bundle/provenance parity."""
+    """Reparse authenticated source bytes and require exact bundle/provenance parity."""
     profile = config.profile
     evidence = inspect_context_metadata(root, config, source)
     if metadata is not None and evidence != metadata:
-        raise Phase10PreflightError("silver metadata changed after the metadata-only guard")
-    frames: list[pd.DataFrame] = []
-    for bundle in evidence["bundles"]:
-        record = bundle["archive"]
-        if profile.source_id == "silver":
-            # Keep the legacy parser entry point for reproducible silver evidence.
-            reparsed, actual = parse_histdata_xagusd_archive(
-                record["path"],
-                year=bundle["year"],
-                source=source,
-                ingested_at_utc=pd.Timestamp(record["ingested_at_utc"]),
-            )
-        else:
-            from gold_forecasting.phase10.histdata_context import parse_histdata_context_archive
+        raise Phase10PreflightError("context metadata changed after the metadata-only guard")
+    if profile.source_id == "rate":
+        result = _load_verified_rate(root, config, source, evidence)
+    else:
+        frames: list[pd.DataFrame] = []
+        for bundle in evidence["bundles"]:
+            record = bundle["archive"]
+            if profile.source_id == "silver":
+                reparsed, actual = parse_histdata_xagusd_archive(
+                    record["path"],
+                    year=bundle["year"],
+                    source=source,
+                    ingested_at_utc=pd.Timestamp(record["ingested_at_utc"]),
+                )
+            else:
+                from gold_forecasting.phase10.histdata_context import parse_histdata_context_archive
 
-            reparsed, actual = parse_histdata_context_archive(
-                record["path"],
-                year=bundle["year"],
-                source=source,
-                symbol=profile.symbol,
-                ingested_at_utc=pd.Timestamp(record["ingested_at_utc"]),
-            )
-        if json.dumps(actual, sort_keys=True) != json.dumps(record, sort_keys=True):
-            raise Phase10PreflightError(
-                "silver source archive hash/metadata differs from original bytes"
-            )
-        loaded = load_context_bundle(bundle["manifest_path"], source)
-        try:
-            pd.testing.assert_frame_equal(loaded, reparsed, check_exact=True)
-        except AssertionError as exc:
-            raise Phase10PreflightError(
-                "silver bundle observations differ from authenticated XAGUSD source archive"
-            ) from exc
-        frames.append(loaded)
-    result = validate_observations(pd.concat(frames, ignore_index=True), source)
+                reparsed, actual = parse_histdata_context_archive(
+                    record["path"],
+                    year=bundle["year"],
+                    source=source,
+                    symbol=profile.symbol,
+                    ingested_at_utc=pd.Timestamp(record["ingested_at_utc"]),
+                )
+            if json.dumps(actual, sort_keys=True) != json.dumps(record, sort_keys=True):
+                raise Phase10PreflightError(
+                    "silver source archive hash/metadata differs from original bytes"
+                )
+            loaded = load_context_bundle(bundle["manifest_path"], source)
+            try:
+                pd.testing.assert_frame_equal(loaded, reparsed, check_exact=True)
+            except AssertionError as exc:
+                raise Phase10PreflightError(
+                    "silver bundle observations differ from authenticated XAGUSD source archive"
+                ) from exc
+            frames.append(loaded)
+        result = validate_observations(pd.concat(frames, ignore_index=True), source)
     if inspect_context_metadata(root, config, source) != evidence:
-        raise Phase10PreflightError("silver metadata changed during verification")
+        raise Phase10PreflightError("context metadata changed during verification")
     return result, evidence
 
 
@@ -293,7 +470,7 @@ def augment_context_table(
     observations: pd.DataFrame,
     source: ContextSource,
 ) -> pd.DataFrame:
-    """Join closed-candle gold prices and existing PIT silver features without row loss."""
+    """Join exact closed-candle gold prices and PIT context without row loss."""
     profile = profile_for_source(source.source_id)
     validate_modeled_context_source(source, profile)
     keys = ["instrument", "source", "source_candle_open_utc"]
@@ -500,6 +677,7 @@ def run_phase10_preflight(
 
 
 __all__ = [
+    "RATE_MODEL_FEATURES",
     "SILVER_MODEL_FEATURES",
     "Phase10PreflightError",
     "Phase10PreparedInputs",
