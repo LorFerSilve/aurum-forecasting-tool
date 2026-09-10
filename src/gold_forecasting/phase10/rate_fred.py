@@ -86,8 +86,8 @@ def _read_source(path: Path) -> bytes:
 def _holiday_dates(start: pd.Timestamp, end: pd.Timestamp) -> set[date]:
     calendar = USFederalHolidayCalendar()
     holidays = calendar.holidays(
-        start=(start - pd.Timedelta(days=7)).date(),
-        end=(end + pd.Timedelta(days=14)).date(),
+        start=(start - pd.Timedelta(days=7)).to_pydatetime(),
+        end=(end + pd.Timedelta(days=14)).to_pydatetime(),
     )
     return {stamp.date() for stamp in holidays}
 
