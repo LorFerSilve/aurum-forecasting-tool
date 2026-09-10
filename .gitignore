@@ -60,6 +60,8 @@ reports/phase9_dry_run/**
 reports/phase9_preflight.json
 reports/phase10_dry_run*/
 reports/phase10_runs/**
+reports/phase10_dollar_runs/**
+reports/phase10_dollar_preflight.json
 reports/phase10_preflight.json
 reports/data/*.parquet
 

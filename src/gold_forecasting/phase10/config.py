@@ -1,4 +1,4 @@
-"""Frozen configuration for the exploratory Phase-10 silver ablation."""
+"""Frozen configuration for independently registered Phase-10 source ablations."""
 
 from __future__ import annotations
 
@@ -8,6 +8,7 @@ from typing import Literal, Self
 from pydantic import BaseModel, ConfigDict, StrictInt, field_validator, model_validator
 
 from gold_forecasting.config import _load_yaml_mapping
+from gold_forecasting.phase10.profiles import ContextProfile, profile_for_protocol
 
 
 class Phase10Config(BaseModel):
@@ -16,7 +17,9 @@ class Phase10Config(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     schema_version: Literal[1] = 1
-    protocol_version: Literal["phase10-silver-modeled-v1"] = "phase10-silver-modeled-v1"
+    protocol_version: Literal["phase10-silver-modeled-v1", "phase10-dollar-eurusd-modeled-v1"] = (
+        "phase10-silver-modeled-v1"
+    )
     data_config: str = "phase5.yaml"
     features_config: str = "features_phase7.yaml"
     source_config: str = "phase10_silver_exploratory.yaml"
@@ -38,6 +41,11 @@ class Phase10Config(BaseModel):
     gap_minutes: StrictInt = 181
     seed: StrictInt = 20260906
     minimum_policy_trades: StrictInt = 20
+
+    @property
+    def profile(self) -> ContextProfile:
+        """Derived without altering the frozen silver serialized config shape."""
+        return profile_for_protocol(self.protocol_version)
 
     @field_validator("schema_version", mode="before")
     @classmethod

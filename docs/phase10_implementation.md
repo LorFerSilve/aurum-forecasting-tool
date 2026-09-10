@@ -1,6 +1,6 @@
 # Fase 10 — externe context en eventinformatie
 
-**Status:** XAGUSD exploratory ablation afgerond en gevalideerd (`stop`); Phase 10 gaat verder met de dollarproxy.
+**Status:** XAGUSD exploratory ablation afgerond en gevalideerd (`stop`); dollarproxy-contract en generieke runner zijn geïmplementeerd, maar de lokale marktbenchmark is nog niet uitgevoerd.
 
 **Branch:** `codex/phase10-external-context`
 
@@ -72,7 +72,7 @@ bundles kunnen CSV gebruiken; real-data context gebruikt gecomprimeerde Parquet-
 Iedere partitie heeft een exacte kolomvolgorde, row count, SHA-256 en halfopen
 observatiegrenzen binnen 2020–2024. Een bundle-set mag uitsluitend sibling manifests
 bevatten en de volledige samengevoegde release stream wordt opnieuw gevalideerd.
-De XAGUSD-import bewaart daarnaast per jaarlijks bronarchief SHA-256, grootte,
+De contextimport bewaart daarnaast per jaarlijks bronarchief SHA-256, grootte,
 bronpagina, gebruikte ZIP-members en project-ingestiontijd.
 
 Per cutoff wordt de recentste waarneming genomen uit de versies die toen
@@ -139,6 +139,46 @@ niet in Git opgenomen. Een modeled-latency bundle kan de status
 Zie [het Phase-10 onderzoeksprotocol](research_protocol_phase10.md) voor de vooraf
 bevroren admissionregels.
 
+## Dollarproxy: inverse EURUSD contract gereed, benchmark geblokkeerd op lokale data
+
+De tweede bronhypothese is expliciet `HistData EURUSD M1 bid-close`, met
+`-diff(log(EURUSD))` als directionele dollarsterkte. Dit is geen DXY-reconstructie
+en geen uitvoerbare inverse USDEUR-quote. ICE DXY blijft een mogelijke latere bron
+wanneer een concrete levering, rechten en historische release/correctie-evidence
+beschikbaar zijn; de onderbouwing en vijf lokale EURUSD-bestanden staan in
+[phase10_dollar_source_research.md](phase10_dollar_source_research.md).
+
+De provider-neutrale HistData-adapter staat in `phase10/histdata_context.py`; de
+bestaande silverfuncties zijn dunne compatibiliteitswrappers. De dollarprofiel- en
+featurelaag gebruikt dezelfde UTC-05-candle-close plus modeled 60 seconden, backward
+as-of selectie, 600 seconden stalegrens, hashes, CRC/OHLC/source-year guards en
+Parquet bundle-set als silver. De nieuwe configs zijn:
+
+- `configs/phase10_dollar.yaml`: uitgeschakelde source-readiness config;
+- `configs/phase10_dollar_exploratory.yaml`: enabled, uitsluitend modeled latency;
+- `configs/phase10_dollar_ablation.yaml`: bevroren 15m exploratory runnerconfig.
+
+De vijf dollarfeaturekolommen, gold/EUR-interactie, rolling correlatie, missing/stale/
+age-audit en exacte fallback zijn vóór de markt-run vastgelegd in het protocol. Het
+zelfde Phase-7 gold-universe, de drie outer folds, 181 minuten gap, logistic grid en
+inner-only selectie gelden. De shared runner en artifact-validator binden protocol,
+source, profile en variantnaam; een unfit contextmodel mag geen niet-fallbackrijen
+opleveren. Er is geen download en geen echte dollarbenchmark uitgevoerd zolang de
+vijf lokale ZIPs ontbreken.
+
+Na lokale acquisitie:
+
+```powershell
+gold-forecast phase10 dollar-import --archive-directory data/raw/phase10/dollar --output data/context/phase10/dollar
+gold-forecast phase10 preflight --config configs/phase10_dollar_ablation.yaml --report reports/phase10_dollar_preflight.json
+gold-forecast phase10 run --config configs/phase10_dollar_ablation.yaml
+gold-forecast phase10 validate reports/phase10_dollar_runs/<run-id>
+```
+
+Ook een positieve modeled-latency uitkomst kan geen championpromotie of tradingactivatie
+veroorzaken. PR #4 blijft draft totdat de dollarablation en het formele Phase-10
+bronbesluit zijn afgerond.
+
 ## Resterend werk vóór afronding van fase 10
 
 De code voor de eerste silver ablation is nu gereed. De frozen Phase-7 15m
@@ -165,11 +205,11 @@ backtests en een completionmanifest. De validator replayt artifact inventory,
 reference hashes, gold alignment, causal silverfeatures, fallback, selected
 three-C logistic grid, policyselectie, metrics en run-level admission gates.
 
-Wat nog daadwerkelijk uitgevoerd moet worden:
+Wat nog daadwerkelijk uitgevoerd moet worden voor de dollarbron:
 
-1. zorg dat de echte XAGUSD 2020–2024 jaarlijkse ZIPs lokaal aanwezig zijn;
-2. importeer ze met `phase10 silver-import`;
-3. draai de real-data `phase10 preflight --config ...`;
+1. zorg dat de echte EURUSD 2020–2024 jaarlijkse ZIPs lokaal aanwezig zijn;
+2. importeer ze met `phase10 dollar-import`;
+3. draai de dollar real-data `phase10 preflight --config ...`;
 4. inspecteer coverage/alignment en los alleen echte preflightproblemen op;
 5. alleen na een volledig groene preflight: draai de modeled-latency exploratory run;
 6. valideer de run met `phase10 validate`;
@@ -218,3 +258,7 @@ Daarom:
 - volgende onafhankelijke bronhypothese: **dollarproxy**.
 
 Zie [het silver-verificatierapport](phase10_silver_verification.md).
+
+De dollarbenchmark is nog niet geopend: de benodigde vijf EURUSD-archieven staan niet
+lokaal in de checkout. Er is dus nog geen dollar predictive/economic resultaat of
+source-decision. Geen 2025+ holdout is gelezen.

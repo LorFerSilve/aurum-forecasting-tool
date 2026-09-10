@@ -1,4 +1,4 @@
-"""Frozen classical methodology with exact, row-preserving silver fallback."""
+"""Frozen classical methodology with exact, row-preserving source fallback."""
 
 from __future__ import annotations
 
@@ -38,33 +38,45 @@ from gold_forecasting.evaluation.walk_forward import (
     select_block,
     validate_development_frame,
 )
-from gold_forecasting.phase10.features import SILVER_FEATURE_NAMES
+from gold_forecasting.phase10.profiles import SILVER_PROFILE, ContextProfile
 
-SILVER_MODEL_FEATURES = tuple(
-    name for name in SILVER_FEATURE_NAMES if name not in {"silver_is_missing", "silver_is_stale"}
-)
+SILVER_MODEL_FEATURES = SILVER_PROFILE.model_features
 _PREDICTION_FIELDS = [*PROBABILITY_COLUMNS, "expected_return_bps", "predicted_class"]
 
 
-def silver_usable_mask(table: pd.DataFrame) -> pd.Series:
+def context_usable_mask(
+    table: pd.DataFrame, *, profile: ContextProfile = SILVER_PROFILE
+) -> pd.Series:
     """Routing uses actual finite context, never imputed flags or levels."""
-    for name in ("silver_is_missing", "silver_is_stale"):
+    for name in (f"{profile.source_id}_is_missing", f"{profile.source_id}_is_stale"):
         if not is_bool_dtype(table[name].dtype) or table[name].isna().any():
             raise ValueError("silver routing flags must be nonmissing booleans")
-    finite = np.isfinite(table[list(SILVER_MODEL_FEATURES)].to_numpy(dtype=np.float64)).all(axis=1)
+    finite = np.isfinite(table[list(profile.model_features)].to_numpy(dtype=np.float64)).all(axis=1)
     usable = pd.Series(
-        ~table["silver_is_missing"] & ~table["silver_is_stale"] & finite,
+        ~table[f"{profile.source_id}_is_missing"]
+        & ~table[f"{profile.source_id}_is_stale"]
+        & finite,
         index=table.index,
     )
-    if "silver_usable" in table and not table["silver_usable"].equals(usable):
+    if f"{profile.source_id}_usable" in table and not table[f"{profile.source_id}_usable"].equals(
+        usable
+    ):
         raise ValueError("silver_usable disagrees with actual source feature availability")
     return usable
 
 
-def context_coverage(table: pd.DataFrame, fallback: pd.Series | None = None) -> dict[str, Any]:
-    usable = silver_usable_mask(table)
-    ages = table["silver_age_seconds"].dropna().astype(float)
-    missing, stale = table["silver_is_missing"], table["silver_is_stale"]
+def context_coverage(
+    table: pd.DataFrame,
+    fallback: pd.Series | None = None,
+    *,
+    profile: ContextProfile = SILVER_PROFILE,
+) -> dict[str, Any]:
+    usable = context_usable_mask(table, profile=profile)
+    ages = table[f"{profile.source_id}_age_seconds"].dropna().astype(float)
+    missing, stale = (
+        table[f"{profile.source_id}_is_missing"],
+        table[f"{profile.source_id}_is_stale"],
+    )
     return {
         "rows": len(table),
         "usable_rows": int(usable.sum()),
@@ -111,10 +123,12 @@ def _aligned_reference(rows: pd.DataFrame, reference: pd.DataFrame) -> pd.DataFr
     return reference.reset_index(drop=True).copy()
 
 
-def route_silver_predictions(
+def route_context_predictions(
     rows: pd.DataFrame,
     reference: pd.DataFrame,
     model: FittedModel | None,
+    *,
+    profile: ContextProfile = SILVER_PROFILE,
 ) -> pd.DataFrame:
     """Copy frozen predictions first and replace only supported context rows.
 
@@ -123,10 +137,14 @@ def route_silver_predictions(
     """
     result = _aligned_reference(rows, reference)
     rows = rows.reset_index(drop=True)
-    usable = silver_usable_mask(rows)
-    for name in (*SILVER_MODEL_FEATURES, "silver_is_missing", "silver_is_stale"):
+    usable = context_usable_mask(rows, profile=profile)
+    for name in (
+        *profile.model_features,
+        f"{profile.source_id}_is_missing",
+        f"{profile.source_id}_is_stale",
+    ):
         result[name] = rows[name]
-    result["silver_usable"] = usable
+    result[f"{profile.source_id}_usable"] = usable
     fallback = ~usable if model is not None else pd.Series(True, index=rows.index)
     result["used_price_only_fallback"] = fallback
     if model is not None and usable.any():
@@ -142,13 +160,15 @@ def route_silver_predictions(
     return result
 
 
-def _fit_silver(
+def _fit_context(
     train: pd.DataFrame,
     names: tuple[str, ...],
     spec: ModelSpec,
     config: BenchmarkConfig,
+    *,
+    profile: ContextProfile = SILVER_PROFILE,
 ) -> tuple[FittedModel | None, dict[str, Any]]:
-    usable = silver_usable_mask(train)
+    usable = context_usable_mask(train, profile=profile)
     supported = train.loc[usable]
     audit: dict[str, Any] = {
         "gold_train_rows": len(train),
@@ -167,7 +187,7 @@ def _fit_silver(
         names,
         spec,
         config,
-        allowed_feature_names=frozenset((*ALLOWED_FEATURE_NAMES, *SILVER_MODEL_FEATURES)),
+        allowed_feature_names=frozenset((*ALLOWED_FEATURE_NAMES, *profile.model_features)),
     )
     preprocessor = model.preprocessor
     audit.update(
@@ -182,7 +202,7 @@ def _fit_silver(
     return model, audit
 
 
-def evaluate_silver_fold(
+def evaluate_context_fold(
     table: pd.DataFrame,
     price_feature_names: tuple[str, ...],
     fold: WalkForwardFold,
@@ -190,6 +210,8 @@ def evaluate_silver_fold(
     reference_inner: tuple[pd.DataFrame, ...],
     reference_policy: DecisionPolicy,
     directory: Path,
+    *,
+    profile: ContextProfile = SILVER_PROFILE,
 ) -> dict[str, Any]:
     """Select the three frozen logistic candidates and policy on complete inner universes."""
     validate_development_frame(table)
@@ -200,7 +222,7 @@ def evaluate_silver_fold(
         raise ValueError("silver challenger requires the exact frozen MVP price feature basis")
     if len(reference_inner) != len(fold.inner_folds):
         raise ValueError("frozen inner reference fold count differs")
-    names = (*price_feature_names, *SILVER_MODEL_FEATURES)
+    names = (*price_feature_names, *profile.model_features)
     config = BenchmarkConfig(horizons=(15,))
     train = select_block(table, fold.train, gap_minutes=GAP_MINUTES)
     calibration = select_block(table, fold.calibration, purge=False)
@@ -233,8 +255,8 @@ def evaluate_silver_fold(
         scores: list[dict[str, Any]] = []
         records = []
         for inner, inner_train, validation, reference in inner_blocks:
-            model, evidence = _fit_silver(inner_train, names, spec, config)
-            predicted = route_silver_predictions(validation, reference, model)
+            model, evidence = _fit_context(inner_train, names, spec, config, profile=profile)
+            predicted = route_context_predictions(validation, reference, model, profile=profile)
             scores.append(
                 {
                     "inner_fold": inner.name,
@@ -243,7 +265,7 @@ def evaluate_silver_fold(
                     "validation_rows": len(validation),
                     "validation_sample_digest": sample_id_digest(validation["sample_id"]),
                     "context": context_coverage(
-                        validation, predicted["used_price_only_fallback"]
+                        validation, predicted["used_price_only_fallback"], profile=profile
                     ),
                 }
             )
@@ -276,22 +298,25 @@ def evaluate_silver_fold(
     ):
         write_parquet_atomic(directory / f"selected_inner_{index}.parquet", predicted)
         write_parquet_atomic(directory / f"reference_inner_{index}.parquet", reference)
-    model, training_audit = _fit_silver(
+    model, training_audit = _fit_context(
         train,
         names,
         ModelSpec(**selected["spec"]),
         config,
+        profile=profile,
     )
-    predicted = route_silver_predictions(test, reference_records, model)
+    predicted = route_context_predictions(test, reference_records, model, profile=profile)
     if model is not None:
         checkpoint = directory / "final_model.joblib"
         _save_model(model, checkpoint)
-        reloaded = route_silver_predictions(test, reference_records, joblib.load(checkpoint))
+        reloaded = route_context_predictions(
+            test, reference_records, joblib.load(checkpoint), profile=profile
+        )
         if not predicted.equals(reloaded):
             raise ValueError("saved silver model prediction parity failed")
     training_audit["selected_spec"] = selected["spec"]
     training_audit["checkpoint_prediction_parity"] = True
-    training_audit["context"] = context_coverage(train)
+    training_audit["context"] = context_coverage(train, profile=profile)
     write_json_atomic(directory / "training_audit.json", training_audit)
     write_json_atomic(directory / "split_audit.json", split)
     write_json_atomic(directory / "selection.json", selection)
@@ -301,10 +326,17 @@ def evaluate_silver_fold(
             reference_policy,
             directory / "reference",
         ),
-        "silver": _evaluate_predictions(predicted, policy, directory / "silver"),
+        profile.source_id: _evaluate_predictions(predicted, policy, directory / profile.source_id),
     }
     return {
         "split": split,
         "models": results,
-        "context": context_coverage(test, predicted["used_price_only_fallback"]),
+        "context": context_coverage(test, predicted["used_price_only_fallback"], profile=profile),
     }
+
+
+# Legacy silver entry points retain their default signatures and artifact semantics.
+silver_usable_mask = context_usable_mask
+route_silver_predictions = route_context_predictions
+_fit_silver = _fit_context
+evaluate_silver_fold = evaluate_context_fold

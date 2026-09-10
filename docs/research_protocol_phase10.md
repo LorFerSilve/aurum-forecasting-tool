@@ -2,7 +2,8 @@
 
 **Strict protocol:** `phase10-context-v1`  
 **Exploratory silver protocol:** `phase10-silver-modeled-v1`  
-**Status:** structurele contracten worden bevroren vóór de eerste real-data ablation.
+**Exploratory dollar protocol:** `phase10-dollar-eurusd-modeled-v1`  
+**Status:** silver afgerond (`stop`); dollarcontract vooraf vastgelegd, marktbenchmark nog gesloten.
 
 ## Doel
 
@@ -238,3 +239,66 @@ Per outer fold en run-level:
 9. alleen met echte historische release-evidence mag een strict-PIT silver benchmark worden geopend.
 
 Geen stap opent de finale holdout.
+
+## Bron 2 — inverse EURUSD-dollarproxy (2026-09-10)
+
+De [bronvergelijking en acquisitie-instructies](phase10_dollar_source_research.md)
+onderbouwen de expliciete keuze voor HistData EURUSD M1. De hypothese is bilaterale
+dollarsterkte tegenover de euro. Deze bron is geen ICE DXY en geen brede dollarindex.
+Voor echte DXY ontbreken lokaal een concrete geauthenticeerde levering, aantoonbare
+gebruiksrechten en historische release/correctie-evidence. HistData UDXUSD heeft
+bovendien onvoldoende gedocumenteerde indexidentiteit.
+
+Silver run `20260909T133304370198Z-be3c4015` blijft afgesloten met `stop`; silver wordt
+niet met dollar gecombineerd. De volgende contracten gelden ongewijzigd voor dollar:
+
+- dezelfde frozen Phase-7 15m `mvp/logistic` reference en completion hierboven;
+- dezelfde gold rows, waarden, sample-ID-semantiek en common sample digests;
+- outer testjaren 2022/2023/2024, exact dezelfde inner folds en 181 minuten gap/purge;
+- dezelfde MVP price-featurebasis, logistic `C={0.1,1.0,10.0}`, `class_weight="balanced"`;
+- train-only preprocessing; model- en policyselectie uitsluitend op inner folds;
+- dezelfde predictive/economic gates, kosten en no-trade policy;
+- exact persisted Phase-7 probabilities bij missing/stale, onvoldoende historie of
+  een onbruikbaar contextmodel; de gold universe wordt niet op context gefilterd;
+- `champion_promotion=false`, `trading_activation=false`, `holdout_opened=false`.
+
+De ruwe scalar `dollar_value` blijft EURUSD bid-close (USD per EUR), met
+`source_id=dollar`, originele `eurusd-m1-...` observation IDs en EURUSD archive-hashes.
+De adapter accepteert uitsluitend de vastgelegde EURUSD/source-binding. Zij maakt geen
+inverse executable bid/ask en reconstrueert geen spread, volume of microstructure.
+Timestamp-open is een expliciete interpretatie; vaste UTC-05 zonder DST, observed close
+= open + 1min, modeled availability = close + 60s, stalegrens 600s. Downloadtijd is
+afzonderlijke provenance en bewijst geen historische release.
+
+De vijf modelkolommen zijn vóór de benchmark bevroren, op de bestaande 3min goldcadans:
+
+| Feature | Causale definitie |
+|---|---|
+| `dollar_return_1_bps` | `-10000 * diff(log(EURUSD))` over één opeenvolgende beschikbare observatie |
+| `dollar_momentum_5_bps` | Dezelfde negatieve logverandering over vijf stappen (15min) |
+| `gold_eur_return_1_bps` | Gold-logreturn plus dollar-logreturn: indicatieve verandering van gold in EUR uit beschikbare bids |
+| `gold_dollar_correlation_20` | Trailing Pearson-correlatie van twintig gepaarde gold/dollarreturns |
+| `dollar_age_seconds` | Prediction cutoff minus gebruikte observatietijd |
+
+De gold/EUR-interactie is indicatief: de as-of EURUSD-bar kan ouder zijn dan de goldbar.
+Alle modelkolommen moeten eindig zijn. `dollar_is_missing`, `dollar_is_stale` en
+`dollar_usable` zijn routing/audit, geen vervangende modelinputs. Een herhaalde quote
+geeft geen nieuwe nulreturn. Prediction- of observatiegaps starten de benodigde vensters
+opnieuw; correlatie vereist 21 opeenvolgende niveaus. Er wordt niets geïnterpoleerd.
+
+Het protocol kan uitsluitend exploratory draaien. Het wijzigen van een config naar
+`provider_timestamp` of een strict protocol faalt gesloten; eventuele strict-PIT
+admission vereist later een afzonderlijk geverifieerd contract en historische evidence.
+Een geslaagde exploratory predictive gate kan alleen `seek_strict_source` rechtvaardigen.
+
+De gemeenschappelijke preflight authenticeert eerst alle jaarmetadata, vervolgens
+archive/bundle-parity en de canonieke Phase-7 reference, goldwaarden en folds. Alleen na
+volledig groene preflight op een clean commit mag RunRegistry worden gestart. Ontbrekende
+lokale EURUSD-bestanden blokkeren dit; er wordt niets automatisch gedownload. De runner
+bewaart bron/config/code/dependencies, features, alle inner/outer voorspellingen,
+train-audits, policies en base/stress metrics. Completion wordt pas na semantische replay
+verzegeld; de validator herhaalt hashes, features, fallback, selectie en gates.
+
+De bron moet na die nog uit te voeren ablation haar eigen `stop/seek_strict_source`
+besluit krijgen. De 2025+ holdout blijft gesloten en PR #4 blijft draft zolang Phase 10
+niet volledig is afgerond.

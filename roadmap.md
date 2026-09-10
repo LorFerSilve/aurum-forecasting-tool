@@ -1147,6 +1147,10 @@ dollarproxy. Er is nog geen contextpromotie of `v0.3`-release.
   terugvallen op de frozen price-only champion.
 - [x] Modeled-latency evidence kan technisch geen championpromotie activeren.
 - [x] Voer de echte XAGUSD 2020–2024 exploratory ablation uit en neem het silverbesluit (`stop`).
+- [x] Onderzoek en registreer een expliciete dollarproxykeuze; gebruik inverse EURUSD alleen als modeled-latency exploratory bron zolang DXY-levering en strict-PIT evidence ontbreken.
+- [x] Bouw de dollarbronconfig, gedeelde HistData-importadapter, causale dollarfeatures, fallback-audit, nested logistic runner en artifact-validator.
+- [ ] Verkrijg en verifieer lokaal de EURUSD 2020–2024 archieven; voer daarna pas de guarded exploratory dollarablation uit.
+- [ ] Neem een afzonderlijk dollar `stop`/`seek_strict_source`-besluit; houd champion, trading en 2025+ holdout gesloten.
 - [ ] Voeg alleen bronnen met bewezen strict-PIT meerwaarde standaard toe.
 - [ ] Bevries uiteindelijk de Phase-10 bronset vóór `v0.3`.
 

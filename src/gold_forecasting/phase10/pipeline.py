@@ -1,4 +1,4 @@
-"""Exploratory silver ablation orchestration on fully verified local inputs."""
+"""Exploratory source ablation orchestration on fully verified local inputs."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ from gold_forecasting.artifacts import (
 )
 from gold_forecasting.phase10.artifacts import complete_phase10_run, summarize_phase10
 from gold_forecasting.phase10.real_preflight import prepare_phase10_inputs
-from gold_forecasting.phase10.training import evaluate_silver_fold
+from gold_forecasting.phase10.training import evaluate_context_fold
 from gold_forecasting.registry import RunRegistry, get_git_code_version
 
 
@@ -23,9 +23,16 @@ def run_phase10(config_path: str | Path = "configs/phase10_silver_ablation.yaml"
     path = Path(config_path).resolve(strict=True)
     prepared = prepare_phase10_inputs(path)
     root, config = prepared.root, prepared.config
+    profile = config.profile
     report = prepared.report
     if (
-        report.get("status") != "passed"
+        prepared.source.source_id != profile.source_id
+        or report.get("protocol") != profile.protocol
+        or report.get("formal_benchmark_ready") is not False
+        or report.get("strict_pit_source_ready") is not False
+        or report.get("champion_changed") is not False
+        or report.get("trading_activated") is not False
+        or report.get("status") != "passed"
         or report.get("exploratory_ablation_ready") is not True
         or report.get("holdout_opened") is not False
         or report["code_version"] != get_git_code_version(root)
@@ -90,10 +97,12 @@ def run_phase10(config_path: str | Path = "configs/phase10_silver_ablation.yaml"
         shutil.copyfile(reference.root / "completion.json", output / "reference_completion.json")
         folds = {}
         for fold in prepared.folds:
-            print(f"  {fold.name}: silver logistic selection and evaluation", flush=True)
+            print(
+                f"  {fold.name}: {profile.source_id} logistic selection and evaluation", flush=True
+            )
             frozen = prepared.references.fold(fold.name)
             destination = output / "folds" / fold.name
-            folds[fold.name] = evaluate_silver_fold(
+            folds[fold.name] = evaluate_context_fold(
                 prepared.table,
                 prepared.feature_columns,
                 fold,
@@ -101,6 +110,7 @@ def run_phase10(config_path: str | Path = "configs/phase10_silver_ablation.yaml"
                 frozen.inner_records,
                 frozen.policy,
                 destination,
+                profile=profile,
             )
             base = f"horizon_15/mvp/{fold.name}"
             copies = {
@@ -134,13 +144,13 @@ def run_phase10(config_path: str | Path = "configs/phase10_silver_ablation.yaml"
                 "family": "logistic",
             },
             "folds": folds,
-            "comparison": summarize_phase10(list(folds.values())),
+            "comparison": summarize_phase10(list(folds.values()), profile=profile),
         }
         write_json_atomic(output / "summary.json", summary)
         write_text_atomic(
             output / "summary.md",
             (
-                "# Phase 10 exploratory XAGUSD silver ablation\n\n"
+                f"# Phase 10 exploratory {profile.title} ablation\n\n"
                 f"Protocol: `{config.protocol_version}`.\n\n"
                 f"Decision: `{summary['comparison']['decision']}`.\n\n"
                 "Modeled latency is an assumption, not historical release evidence. "

@@ -1,4 +1,4 @@
-"""Development-only gold/XAGUSD integrity and common-universe preflight."""
+"""Development-only gold/context integrity and common-universe preflight."""
 
 from __future__ import annotations
 
@@ -35,8 +35,12 @@ from gold_forecasting.phase10.contracts import (
     load_source,
     validate_observations,
 )
-from gold_forecasting.phase10.features import build_silver_features
 from gold_forecasting.phase10.point_in_time import context_coverage, join_context
+from gold_forecasting.phase10.profiles import (
+    SILVER_PROFILE,
+    ContextProfile,
+    profile_for_source,
+)
 from gold_forecasting.phase10.reference import (
     Phase10Reference,
     load_phase10_reference,
@@ -45,13 +49,7 @@ from gold_forecasting.phase10.reference import (
 from gold_forecasting.phase10.silver_histdata import parse_histdata_xagusd_archive
 from gold_forecasting.registry import get_git_code_version
 
-SILVER_MODEL_FEATURES = (
-    "silver_return_1_bps",
-    "silver_momentum_5_bps",
-    "gold_silver_log_ratio",
-    "gold_silver_correlation_20",
-    "silver_age_seconds",
-)
+SILVER_MODEL_FEATURES = SILVER_PROFILE.model_features
 _YEARS = (2020, 2021, 2022, 2023, 2024)
 _MAX_METADATA = 1024 * 1024
 
@@ -92,10 +90,10 @@ def _json_metadata(path: Path) -> tuple[dict[str, Any], str]:
     return decoded, hashlib.sha256(payload).hexdigest()
 
 
-def validate_modeled_silver_source(source: ContextSource) -> None:
+def validate_modeled_context_source(source: ContextSource, profile: ContextProfile) -> None:
     """The separately frozen modeled protocol cannot be weakened by source config."""
     expected = {
-        "source_id": "silver",
+        "source_id": profile.source_id,
         "enabled": True,
         "availability_basis": "modeled_latency",
         "publication_delay_seconds": 60,
@@ -110,21 +108,22 @@ def validate_modeled_silver_source(source: ContextSource) -> None:
             raise Phase10PreflightError(f"frozen modeled silver source mismatch: {key}")
 
 
-def inspect_silver_metadata(
+def inspect_context_metadata(
     root: Path,
     config: Phase10Config,
     source: ContextSource,
 ) -> dict[str, Any]:
     """Inspect *all* annual metadata before opening any ZIP or observation payload."""
-    validate_modeled_silver_source(source)
+    profile = config.profile
+    validate_modeled_context_source(source, profile)
     root = root.resolve()
     set_path = _unredirected(root / config.bundle_path, root)
     archive_root = _unredirected(root / config.archive_directory, root)
     bundle_set, set_hash = _json_metadata(set_path)
     manifest = ContextBundleSetManifest.model_validate_json(json.dumps(bundle_set))
-    expected_names = tuple(f"silver-{year}.manifest.json" for year in _YEARS)
+    expected_names = tuple(f"{profile.source_id}-{year}.manifest.json" for year in _YEARS)
     if (
-        manifest.source_id != "silver"
+        manifest.source_id != profile.source_id
         or manifest.availability_basis != "modeled_latency"
         or manifest.bundles != expected_names
     ):
@@ -135,8 +134,8 @@ def inspect_silver_metadata(
     provenance, provenance_hash = _json_metadata(archive_metadata_path)
     expected_provenance = {
         "schema_version": 1,
-        "source_id": "silver",
-        "source_symbol": "XAGUSD",
+        "source_id": profile.source_id,
+        "source_symbol": profile.symbol,
         "availability_basis": "modeled_latency",
         "availability_is_historical_evidence": False,
         "years": list(_YEARS),
@@ -155,7 +154,7 @@ def inspect_silver_metadata(
             raise Phase10PreflightError("silver archive record must be a JSON object")
         expected = {
             "year": year,
-            "source_symbol": "XAGUSD",
+            "source_symbol": profile.symbol,
             "source_timezone_offset": "-05:00",
             "source_observes_dst": False,
             "timestamp_semantics": "candle_open",
@@ -164,7 +163,7 @@ def inspect_silver_metadata(
             "publication_delay_seconds": 60,
             "source_page_url": (
                 "https://www.histdata.com/download-free-forex-historical-data/"
-                f"?/ascii/1-minute-bar-quotes/xagusd/{year}"
+                f"?/ascii/1-minute-bar-quotes/{profile.symbol.lower()}/{year}"
             ),
         }
         if any(
@@ -184,7 +183,7 @@ def inspect_silver_metadata(
         ):
             raise Phase10PreflightError("silver archive SHA-256 is invalid")
         archive_path = _unredirected(
-            archive_root / f"HISTDATA_COM_ASCII_XAGUSD_M1_{year}.zip",
+            archive_root / f"HISTDATA_COM_ASCII_{profile.symbol}_M1_{year}.zip",
             root,
         )
         if Path(str(record.get("path"))).absolute() != archive_path:
@@ -192,7 +191,9 @@ def inspect_silver_metadata(
                 "silver source archive path differs from configured archive"
             )
         if not archive_path.is_file():
-            raise Phase10PreflightError(f"required local XAGUSD archive is missing: {archive_path}")
+            raise Phase10PreflightError(
+                f"required local {profile.symbol} archive is missing: {archive_path}"
+            )
         if type(record.get("size_bytes")) is not int or record["size_bytes"] <= 0:
             raise Phase10PreflightError("silver source archive size must be a positive integer")
         member_names = record.get("members")
@@ -207,10 +208,10 @@ def inspect_silver_metadata(
         if not DEVELOPMENT_START <= start < end <= DEVELOPMENT_END:
             raise Phase10PreflightError("silver bundle span must remain in development 2020-2024")
         if (
-            item.source_id != "silver"
+            item.source_id != profile.source_id
             or item.availability_basis != "modeled_latency"
             or item.format != "parquet"
-            or item.file != f"silver-{year}.parquet"
+            or item.file != f"{profile.source_id}-{year}.parquet"
             or item.row_count <= 0
             or item.row_count != record["rows"]
         ):
@@ -235,7 +236,7 @@ def inspect_silver_metadata(
     }
 
 
-def load_verified_silver(
+def load_verified_context(
     root: Path,
     config: Phase10Config,
     source: ContextSource,
@@ -243,18 +244,31 @@ def load_verified_silver(
     metadata: dict[str, Any] | None = None,
 ) -> tuple[pd.DataFrame, dict[str, Any]]:
     """Reparse authenticated XAGUSD ZIP bytes and require exact bundle/provenance parity."""
-    evidence = inspect_silver_metadata(root, config, source)
+    profile = config.profile
+    evidence = inspect_context_metadata(root, config, source)
     if metadata is not None and evidence != metadata:
         raise Phase10PreflightError("silver metadata changed after the metadata-only guard")
     frames: list[pd.DataFrame] = []
     for bundle in evidence["bundles"]:
         record = bundle["archive"]
-        reparsed, actual = parse_histdata_xagusd_archive(
-            record["path"],
-            year=bundle["year"],
-            source=source,
-            ingested_at_utc=pd.Timestamp(record["ingested_at_utc"]),
-        )
+        if profile.source_id == "silver":
+            # Keep the legacy parser entry point for reproducible silver evidence.
+            reparsed, actual = parse_histdata_xagusd_archive(
+                record["path"],
+                year=bundle["year"],
+                source=source,
+                ingested_at_utc=pd.Timestamp(record["ingested_at_utc"]),
+            )
+        else:
+            from gold_forecasting.phase10.histdata_context import parse_histdata_context_archive
+
+            reparsed, actual = parse_histdata_context_archive(
+                record["path"],
+                year=bundle["year"],
+                source=source,
+                symbol=profile.symbol,
+                ingested_at_utc=pd.Timestamp(record["ingested_at_utc"]),
+            )
         if json.dumps(actual, sort_keys=True) != json.dumps(record, sort_keys=True):
             raise Phase10PreflightError(
                 "silver source archive hash/metadata differs from original bytes"
@@ -268,18 +282,20 @@ def load_verified_silver(
             ) from exc
         frames.append(loaded)
     result = validate_observations(pd.concat(frames, ignore_index=True), source)
-    if inspect_silver_metadata(root, config, source) != evidence:
+    if inspect_context_metadata(root, config, source) != evidence:
         raise Phase10PreflightError("silver metadata changed during verification")
     return result, evidence
 
 
-def augment_silver_table(
+def augment_context_table(
     table: pd.DataFrame,
     gold_candles: pd.DataFrame,
     observations: pd.DataFrame,
     source: ContextSource,
 ) -> pd.DataFrame:
     """Join closed-candle gold prices and existing PIT silver features without row loss."""
+    profile = profile_for_source(source.source_id)
+    validate_modeled_context_source(source, profile)
     keys = ["instrument", "source", "source_candle_open_utc"]
     prices = gold_candles.rename(
         columns={
@@ -299,28 +315,36 @@ def augment_silver_table(
         or augmented["gold_close_available_at_utc"].gt(augmented["prediction_time_utc"]).any()
     ):
         raise Phase10PreflightError("gold close alignment must use the exact closed source candle")
-    result = build_silver_features(join_context(augmented, observations, source))
-    numeric = result.loc[:, list(SILVER_MODEL_FEATURES)].to_numpy(dtype=np.float64)
-    result["silver_usable"] = (
-        ~result["silver_is_missing"] & ~result["silver_is_stale"] & np.isfinite(numeric).all(axis=1)
+    result = profile.build_features(join_context(augmented, observations, source))
+    numeric = result.loc[:, list(profile.model_features)].to_numpy(dtype=np.float64)
+    result[f"{profile.source_id}_usable"] = (
+        ~result[f"{profile.source_id}_is_missing"]
+        & ~result[f"{profile.source_id}_is_stale"]
+        & np.isfinite(numeric).all(axis=1)
     )
     return result
 
 
-def silver_coverage(frame: pd.DataFrame) -> dict[str, Any]:
-    result: dict[str, Any] = dict(context_coverage(frame, "silver"))
-    age = frame["silver_age_seconds"].dropna()
+def context_feature_coverage(
+    frame: pd.DataFrame, *, profile: ContextProfile = SILVER_PROFILE
+) -> dict[str, Any]:
+    result: dict[str, Any] = dict(context_coverage(frame, profile.source_id))
+    age = frame[f"{profile.source_id}_age_seconds"].dropna()
     result.update(
         {
-            "context_usable_rows": int(frame["silver_usable"].sum()),
-            "context_usable_fraction": float(frame["silver_usable"].mean()) if len(frame) else None,
-            "fallback_rows": int((~frame["silver_usable"]).sum()),
-            "fallback_fraction": float((~frame["silver_usable"]).mean()) if len(frame) else None,
+            "context_usable_rows": int(frame[f"{profile.source_id}_usable"].sum()),
+            "context_usable_fraction": float(frame[f"{profile.source_id}_usable"].mean())
+            if len(frame)
+            else None,
+            "fallback_rows": int((~frame[f"{profile.source_id}_usable"]).sum()),
+            "fallback_fraction": float((~frame[f"{profile.source_id}_usable"]).mean())
+            if len(frame)
+            else None,
             "insufficient_history_rows": int(
                 (
-                    ~frame["silver_usable"]
-                    & ~frame["silver_is_missing"]
-                    & ~frame["silver_is_stale"]
+                    ~frame[f"{profile.source_id}_usable"]
+                    & ~frame[f"{profile.source_id}_is_missing"]
+                    & ~frame[f"{profile.source_id}_is_stale"]
                 ).sum()
             ),
             "age_quantiles_seconds": {
@@ -343,7 +367,8 @@ def prepare_phase10_inputs(
     project = load_project_config(path.parent / config.data_config)
     root = project.config_path.parent.parent.resolve()
     source = load_source(_unredirected(path.parent / config.source_config, root))
-    silver_metadata = inspect_silver_metadata(root, config, source)
+    profile = config.profile
+    source_metadata = inspect_context_metadata(root, config, source)
     preflight_development_inputs(project)
     code_version = get_git_code_version(root)
     if require_clean and (
@@ -353,11 +378,11 @@ def prepare_phase10_inputs(
             "real-data preflight requires a clean committed Git working tree"
         )
     references = load_phase10_reference(root, path.parent / config.phase7_champion_config)
-    observations, silver_evidence = load_verified_silver(
+    observations, source_evidence = load_verified_context(
         root,
         config,
         source,
-        metadata=silver_metadata,
+        metadata=source_metadata,
     )
     validate_existing_mvp_data(project.config_path)
     candles: dict[str, pd.DataFrame] = {}
@@ -394,7 +419,7 @@ def prepare_phase10_inputs(
     parity = verify_phase10_universe(references, table, feature_columns)
     folds = make_walk_forward_folds(test_years=config.test_years)
     coverage = _validate_fold_coverage(table, folds, feature_columns)
-    table = augment_silver_table(table, candles["3min"], observations, source)
+    table = augment_context_table(table, candles["3min"], observations, source)
     fold_context: dict[str, Any] = {}
     for fold in folds:
         blocks = {
@@ -402,7 +427,9 @@ def prepare_phase10_inputs(
             "calibration": select_block(table, fold.calibration, purge=False),
             "test": select_block(table, fold.test, purge=False),
         }
-        fold_context[fold.name] = {name: silver_coverage(block) for name, block in blocks.items()}
+        fold_context[fold.name] = {
+            name: context_feature_coverage(block, profile=profile) for name, block in blocks.items()
+        }
     versions = {name: manifest.dataset_version for name, manifest in manifests.items()}
     report: dict[str, Any] = {
         "protocol": config.protocol_version,
@@ -427,16 +454,16 @@ def prepare_phase10_inputs(
         },
         "curated_versions": versions,
         "source": source.model_dump(mode="json"),
-        "silver_evidence": silver_evidence,
+        f"{profile.source_id}_evidence": source_evidence,
         "reference_parity": parity,
         "common_sample_digest": sample_id_digest(table["sample_id"]),
         "common_rows": len(table),
         "folds": coverage,
-        "context_coverage": silver_coverage(table),
+        "context_coverage": context_feature_coverage(table, profile=profile),
         "fold_context": fold_context,
         "config_sha256": sha256_file(path),
         "source_config_sha256": sha256_file(path.parent / config.source_config),
-        "data_version": content_version({"gold": versions, "silver": silver_evidence}),
+        "data_version": content_version({"gold": versions, profile.source_id: source_evidence}),
     }
     return Phase10PreparedInputs(
         root,
@@ -447,7 +474,7 @@ def prepare_phase10_inputs(
         table,
         feature_columns,
         folds,
-        SILVER_MODEL_FEATURES,
+        profile.model_features,
         report,
     )
 
@@ -480,3 +507,14 @@ __all__ = [
     "prepare_phase10_inputs",
     "run_phase10_preflight",
 ]
+
+
+# Existing silver consumers retain their entry points and serialized evidence keys.
+def validate_modeled_silver_source(source: ContextSource) -> None:
+    validate_modeled_context_source(source, SILVER_PROFILE)
+
+
+inspect_silver_metadata = inspect_context_metadata
+load_verified_silver = load_verified_context
+augment_silver_table = augment_context_table
+silver_coverage = context_feature_coverage

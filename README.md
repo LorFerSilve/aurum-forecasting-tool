@@ -217,6 +217,14 @@ beslissing is daarom `stop` en de Phase-7 15m champion blijft behouden. Zie
 [het Phase-10 protocol](docs/research_protocol_phase10.md) en
 [de implementatiestatus](docs/phase10_implementation.md).
 
+De volgende bronhypothese is een expliciet benoemde inverse EURUSD-dollarproxy
+(`phase10-dollar-eurusd-modeled-v1`). De generieke import-, point-in-time-, feature-,
+nested-logistic-, fallback- en artifactketen is aanwezig, maar de benchmark blijft
+gesloten totdat de gebruiker de vijf lokale EURUSD M1 ZIPs onder
+`data/raw/phase10/dollar/` plaatst. DXY wordt niet stilzwijgend vervangen door deze
+bilaterale proxy; de bronkeuze en beperkingen staan in
+[het dollarbrononderzoek](docs/phase10_dollar_source_research.md).
+
 ## Kwaliteitscontroles
 
 ```powershell

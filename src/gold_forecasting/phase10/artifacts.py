@@ -1,4 +1,4 @@
-"""Fail-closed, replayable evidence for the frozen exploratory silver ablation.
+"""Fail-closed, replayable evidence for the frozen exploratory source ablations.
 
 Validation reads only JSON, text and Parquet. Serialized estimators are inventoried
 but never deserialized. A copied, cryptographically pinned Phase-7 inventory also
@@ -45,15 +45,12 @@ from gold_forecasting.evaluation.walk_forward import (
 from gold_forecasting.phase7.pipeline import _economic_gate, _predictive_gate
 from gold_forecasting.phase10.config import Phase10Config
 from gold_forecasting.phase10.contracts import ContextSource
-from gold_forecasting.phase10.features import SILVER_FEATURE_NAMES, build_silver_features
-from gold_forecasting.phase10.real_preflight import validate_modeled_silver_source
+from gold_forecasting.phase10.profiles import SILVER_PROFILE, ContextProfile, profile_for_protocol
+from gold_forecasting.phase10.real_preflight import validate_modeled_context_source
 from gold_forecasting.phase10.reference import PHASE7_REFERENCE_COMPLETION, PHASE7_REFERENCE_RUN
 
-PROTOCOL = "phase10-silver-modeled-v1"
+PROTOCOL = SILVER_PROFILE.protocol
 _YEARS = [2022, 2023, 2024]
-_MODELED_FEATURES = tuple(
-    name for name in SILVER_FEATURE_NAMES if name not in {"silver_is_missing", "silver_is_stale"}
-)
 _PREDICTION_VALUES = [*PROBABILITY_COLUMNS, "expected_return_bps", "predicted_class"]
 _ROOT_FILES = {
     "config.yaml",
@@ -155,12 +152,14 @@ def _same_frame(actual: pd.DataFrame, expected: pd.DataFrame, context: str) -> N
         raise Phase10ArtifactError(f"{context}: row/value parity differs") from exc
 
 
-def context_summary(frame: pd.DataFrame) -> dict[str, Any]:
+def context_summary(
+    frame: pd.DataFrame, *, profile: ContextProfile = SILVER_PROFILE
+) -> dict[str, Any]:
     """Summarize routing, including feature warm-up and observed age distribution."""
     for column in (
-        "silver_usable",
-        "silver_is_missing",
-        "silver_is_stale",
+        f"{profile.source_id}_usable",
+        f"{profile.source_id}_is_missing",
+        f"{profile.source_id}_is_stale",
         "used_price_only_fallback",
     ):
         if (
@@ -169,15 +168,15 @@ def context_summary(frame: pd.DataFrame) -> dict[str, Any]:
             or frame[column].isna().any()
         ):
             raise Phase10ArtifactError(f"{column} must contain nonmissing booleans")
-    usable = frame["silver_usable"]
-    missing = frame["silver_is_missing"]
-    stale = frame["silver_is_stale"]
+    usable = frame[f"{profile.source_id}_usable"]
+    missing = frame[f"{profile.source_id}_is_missing"]
+    stale = frame[f"{profile.source_id}_is_stale"]
     fallback = frame["used_price_only_fallback"]
     if (usable & (missing | stale)).any():
         raise Phase10ArtifactError("missing/stale source marked usable")
     if ((~usable) & (~fallback)).any():
         raise Phase10ArtifactError("unusable silver context bypassed the frozen fallback")
-    ages = frame["silver_age_seconds"].dropna().astype(float)
+    ages = frame[f"{profile.source_id}_age_seconds"].dropna().astype(float)
     if not np.isfinite(ages).all() or (ages < 0).any():
         raise Phase10ArtifactError("invalid silver ages")
     return {
@@ -198,15 +197,17 @@ def context_summary(frame: pd.DataFrame) -> dict[str, Any]:
     }
 
 
-def summarize_phase10(fold_summaries: list[dict[str, Any]]) -> dict[str, Any]:
+def summarize_phase10(
+    fold_summaries: list[dict[str, Any]], *, profile: ContextProfile = SILVER_PROFILE
+) -> dict[str, Any]:
     """Use the shared Phase-7 metric aggregation and exact admission gates."""
     if len(fold_summaries) != 3 or any(
-        set(fold["models"]) != {"reference", "silver"} for fold in fold_summaries
+        set(fold["models"]) != {"reference", profile.source_id} for fold in fold_summaries
     ):
         raise Phase10ArtifactError("comparison requires three aligned reference/silver folds")
     models = aggregate_model_metrics(fold_summaries)
-    predictive = _predictive_gate(models["silver"], models["reference"])
-    economic = _economic_gate(models["silver"], models["reference"])
+    predictive = _predictive_gate(models[profile.source_id], models["reference"])
+    economic = _economic_gate(models[profile.source_id], models["reference"])
     return {
         "models": models,
         "predictive_gate_passed": predictive,
@@ -281,6 +282,7 @@ def _parse_inventory(completion: dict[str, Any]) -> dict[str, dict[str, Any]]:
 def _expected_files(root: Path, paths: set[str]) -> None:
     required = set(_ROOT_FILES)
     resolved = Phase10Config.model_validate(_json(root / "resolved_config.json"))
+    profile = resolved.profile
     required.update(
         {
             "configs/project_root.yaml",
@@ -301,7 +303,7 @@ def _expected_files(root: Path, paths: set[str]) -> None:
         prefix = f"folds/test_{year}/"
         required.update(prefix + name for name in _FOLD_FILES)
         optional.add(prefix + "final_model.joblib")
-        for variant in ("reference", "silver"):
+        for variant in ("reference", profile.source_id):
             required.update(prefix + variant + "/" + name for name in _EVALUATION_FILES)
     source = {
         name for name in paths if name.startswith("source_snapshot/") and name.endswith(".py")
@@ -349,8 +351,10 @@ def _identity(
     expected_run_status: str = "succeeded",
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     summary, run = _json(root / "summary.json"), _json(root / "run.json")
+    resolved = Phase10Config.model_validate(_json(root / "resolved_config.json"))
+    profile = resolved.profile
     contract = {
-        "protocol": PROTOCOL,
+        "protocol": profile.protocol,
         "run_mode": "exploratory_modeled_latency",
         "holdout_opened": False,
         "test_years": _YEARS,
@@ -375,6 +379,7 @@ def _identity(
         )
 
     resolved = Phase10Config.model_validate(_json(root / "resolved_config.json"))
+    profile = resolved.profile
     snapshot = Phase10Config.model_validate(_load_yaml_mapping(root / "config.yaml"))
     _equal(
         snapshot.model_dump(mode="json"),
@@ -387,11 +392,13 @@ def _identity(
 
     source_path = root / "configs" / Path(resolved.source_config).name
     source = ContextSource.model_validate(_load_yaml_mapping(source_path))
-    validate_modeled_silver_source(source)
+    validate_modeled_context_source(source, profile)
     source_payload = source.model_dump(mode="json")
     _equal(_json(root / "source_config.json"), source_payload, "source config JSON/YAML")
 
     preflight = _json(root / "preflight.json")
+    if profile.source_id != "silver":
+        _equal(preflight.get("protocol"), profile.protocol, "preflight protocol binding")
     if (
         preflight.get("status") != "passed"
         or preflight.get("exploratory_ablation_ready") is not True
@@ -451,17 +458,28 @@ def _predictions(frame: pd.DataFrame, block: pd.DataFrame, context: str) -> None
         raise Phase10ArtifactError(f"{context}: prediction class differs from probabilities")
 
 
-def _fallback(silver: pd.DataFrame, reference: pd.DataFrame, block: pd.DataFrame) -> None:
-    for name in ("silver_usable", "used_price_only_fallback"):
+def _fallback(
+    silver: pd.DataFrame,
+    reference: pd.DataFrame,
+    block: pd.DataFrame,
+    *,
+    profile: ContextProfile = SILVER_PROFILE,
+    model_fitted: bool | None = None,
+) -> None:
+    for name in (f"{profile.source_id}_usable", "used_price_only_fallback"):
         if name not in silver or not is_bool_dtype(silver[name]) or silver[name].isna().any():
             raise Phase10ArtifactError(f"fallback needs boolean {name}")
-    usable = block["silver_usable"].to_numpy(dtype=bool)
-    recorded_usable = silver["silver_usable"].to_numpy(dtype=bool)
+    usable = block[f"{profile.source_id}_usable"].to_numpy(dtype=bool)
+    recorded_usable = silver[f"{profile.source_id}_usable"].to_numpy(dtype=bool)
     fallback = silver["used_price_only_fallback"].to_numpy(dtype=bool)
     if not np.array_equal(recorded_usable, usable):
         raise Phase10ArtifactError("silver usable routing differs from feature history")
     if ((~usable) & (~fallback)).any():
         raise Phase10ArtifactError("unusable silver context bypassed the frozen fallback")
+    if model_fitted is False and (~fallback).any():
+        raise Phase10ArtifactError(
+            "unfitted context model emitted non-fallback predictions"
+        )
     _same_frame(
         silver.loc[fallback, _PREDICTION_VALUES],
         reference.loc[fallback, _PREDICTION_VALUES],
@@ -496,33 +514,49 @@ def _evaluation(root: Path, records: pd.DataFrame) -> dict[str, Any]:
     return calculated
 
 
-def _features(root: Path) -> pd.DataFrame:
+def _features(root: Path, *, profile: ContextProfile = SILVER_PROFILE) -> pd.DataFrame:
     table = pd.read_parquet(root / "features.parquet")
     validate_development_frame(table)
     if table["sample_id"].duplicated().any() or table["sample_id"].isna().any():
         raise Phase10ArtifactError("features contain duplicate/missing gold sample IDs")
-    rebuilt = build_silver_features(table)
+    rebuilt = profile.build_features(table)
     _same_frame(
-        table.loc[:, list(SILVER_FEATURE_NAMES)],
-        rebuilt.loc[:, list(SILVER_FEATURE_NAMES)],
+        table.loc[:, list(profile.feature_names)],
+        rebuilt.loc[:, list(profile.feature_names)],
         "causal silver features",
     )
     usable = (
-        ~table["silver_is_missing"]
-        & ~table["silver_is_stale"]
-        & np.isfinite(table.loc[:, list(_MODELED_FEATURES)].to_numpy()).all(axis=1)
+        ~table[f"{profile.source_id}_is_missing"]
+        & ~table[f"{profile.source_id}_is_stale"]
+        & np.isfinite(table.loc[:, list(profile.model_features)].to_numpy()).all(axis=1)
     )
     if (
-        "silver_usable" not in table
-        or not is_bool_dtype(table["silver_usable"])
-        or table["silver_usable"].isna().any()
-        or not np.array_equal(table["silver_usable"].to_numpy(), usable.to_numpy())
+        f"{profile.source_id}_usable" not in table
+        or not is_bool_dtype(table[f"{profile.source_id}_usable"])
+        or table[f"{profile.source_id}_usable"].isna().any()
+        or not np.array_equal(table[f"{profile.source_id}_usable"].to_numpy(), usable.to_numpy())
     ):
         raise Phase10ArtifactError("silver usability must require complete real feature history")
     return table
 
 
-def _fold(root: Path, table: pd.DataFrame, fold: WalkForwardFold) -> dict[str, Any]:
+def _usable_context_rows(table: pd.DataFrame, profile: ContextProfile) -> pd.Series:
+    """Recompute routing eligibility while replaying the persisted fit audit."""
+    return pd.Series(
+        ~table[f"{profile.source_id}_is_missing"]
+        & ~table[f"{profile.source_id}_is_stale"]
+        & np.isfinite(table.loc[:, list(profile.model_features)].to_numpy()).all(axis=1),
+        index=table.index,
+    )
+
+
+def _fold(
+    root: Path,
+    table: pd.DataFrame,
+    fold: WalkForwardFold,
+    *,
+    profile: ContextProfile = SILVER_PROFILE,
+) -> dict[str, Any]:
     directory = root / "folds" / fold.name
     train = select_block(table, fold.train, gap_minutes=181)
     test = select_block(table, fold.test, purge=False)
@@ -541,7 +575,19 @@ def _fold(root: Path, table: pd.DataFrame, fold: WalkForwardFold) -> dict[str, A
     _equal(_json(directory / "reference_split.json"), split, "frozen gold sample universe")
     records: dict[str, pd.DataFrame] = {}
     models: dict[str, Any] = {}
-    for variant in ("reference", "silver"):
+    training = _json(directory / "training_audit.json")
+    fitted = training.get("model_fitted")
+    if not isinstance(fitted, bool):
+        raise Phase10ArtifactError("final model fit audit must contain a boolean model_fitted")
+    usable_train = _usable_context_rows(train, profile)
+    if training.get("usable_train_rows") != int(usable_train.sum()) or training.get(
+        "usable_train_digest"
+    ) != sample_id_digest(train.loc[usable_train, "sample_id"]):
+        raise Phase10ArtifactError("final model usable train audit differs from feature history")
+    expected_fitted = set(train.loc[usable_train, "target_class_id"].unique()) == {0, 1, 2}
+    if fitted is not expected_fitted:
+        raise Phase10ArtifactError("final model_fitted disagrees with usable train class support")
+    for variant in ("reference", profile.source_id):
         records[variant] = pd.read_parquet(directory / variant / "outer_predictions.parquet")
         _predictions(records[variant], test, f"{fold.name}/{variant}")
         models[variant] = _evaluation(directory / variant, records[variant])
@@ -550,24 +596,26 @@ def _fold(root: Path, table: pd.DataFrame, fold: WalkForwardFold) -> dict[str, A
         _json(directory / "reference_evaluation.json")["policy"],
         "frozen baseline policy",
     )
-    _fallback(records["silver"], records["reference"], test)
+    _fallback(
+        records[profile.source_id],
+        records["reference"],
+        test,
+        profile=profile,
+        model_fitted=fitted,
+    )
     inner_records = []
     for index, inner in enumerate(fold.inner_folds):
         block = select_block(table, inner.validation, purge=False)
         reference = pd.read_parquet(directory / f"reference_inner_{index}.parquet")
         silver = pd.read_parquet(directory / f"selected_inner_{index}.parquet")
         _predictions(reference, block, f"{fold.name}/{inner.name}/reference")
-        _predictions(silver, block, f"{fold.name}/{inner.name}/silver")
-        _fallback(silver, reference, block)
+        _predictions(silver, block, f"{fold.name}/{inner.name}/{profile.source_id}")
         inner_records.append(silver)
     selection = _json(directory / "selection.json")
     candidates = selection.get("candidates")
     if not isinstance(candidates, list) or len(candidates) != 3:
         raise Phase10ArtifactError("silver selection requires exactly three frozen candidates")
-    expected_specs = [
-        {"family": "logistic", "value": value}
-        for value in (0.1, 1.0, 10.0)
-    ]
+    expected_specs = [{"family": "logistic", "value": value} for value in (0.1, 1.0, 10.0)]
     if [candidate.get("spec") for candidate in candidates] != expected_specs:
         raise Phase10ArtifactError("silver logistic C-grid differs from frozen Phase-7")
     if any(candidate.get("class_weight") != "balanced" for candidate in candidates):
@@ -596,9 +644,38 @@ def _fold(root: Path, table: pd.DataFrame, fold: WalkForwardFold) -> dict[str, A
         "calibration isolation",
     )
     selected_scores = selected["folds"]
-    for index, (record, score) in enumerate(
-        zip(inner_records, selected_scores, strict=True)
-    ):
+    for index, (record, score) in enumerate(zip(inner_records, selected_scores, strict=True)):
+        block = select_block(table, fold.inner_folds[index].validation, purge=False)
+        reference = pd.read_parquet(directory / f"reference_inner_{index}.parquet")
+        selected_training = score.get("training")
+        if not isinstance(selected_training, dict) or not isinstance(
+            selected_training.get("model_fitted"), bool
+        ):
+            raise Phase10ArtifactError("selected inner fit audit must contain model_fitted")
+        inner_train = select_block(table, fold.inner_folds[index].train, gap_minutes=181)
+        usable_inner = _usable_context_rows(inner_train, profile)
+        if (
+            selected_training.get("usable_train_rows") != int(usable_inner.sum())
+            or selected_training.get("usable_train_digest")
+            != sample_id_digest(inner_train.loc[usable_inner, "sample_id"])
+        ):
+            raise Phase10ArtifactError(
+                "selected inner usable train audit differs from feature history"
+            )
+        expected_inner_fitted = (
+            set(inner_train.loc[usable_inner, "target_class_id"].unique()) == {0, 1, 2}
+        )
+        if selected_training["model_fitted"] is not expected_inner_fitted:
+            raise Phase10ArtifactError(
+                "selected inner model_fitted disagrees with usable train class support"
+            )
+        _fallback(
+            record,
+            reference,
+            block,
+            profile=profile,
+            model_fitted=selected_training["model_fitted"],
+        )
         _equal(
             score.get("metrics"),
             _metrics(record),
@@ -616,11 +693,10 @@ def _fold(root: Path, table: pd.DataFrame, fold: WalkForwardFold) -> dict[str, A
         )
         _equal(
             score.get("context"),
-            context_summary(record),
+            context_summary(record, profile=profile),
             f"selected inner context/{index}",
         )
 
-    training = _json(directory / "training_audit.json")
     _equal(training.get("selected_spec"), selected.get("spec"), "final selected model spec")
     if training.get("class_weight") != "balanced":
         raise Phase10ArtifactError("final silver model class weighting differs")
@@ -634,8 +710,12 @@ def _fold(root: Path, table: pd.DataFrame, fold: WalkForwardFold) -> dict[str, A
     policy, attempts = select_policy(inner_records, minimum_trades=20)
     _equal(selection["selected_policy"], asdict(policy), "inner-only policy selection")
     _equal(selection["policy_candidates"], attempts, "policy candidates replay")
-    _equal(models["silver"]["policy"], asdict(policy), "frozen selected outer policy")
-    return {"split": split, "models": models, "context": context_summary(records["silver"])}
+    _equal(models[profile.source_id]["policy"], asdict(policy), "frozen selected outer policy")
+    return {
+        "split": split,
+        "models": models,
+        "context": context_summary(records[profile.source_id], profile=profile),
+    }
 
 
 def _validate(
@@ -647,10 +727,17 @@ def _validate(
     _expected_files(root, set(inventory))
     _authenticated_reference(root, inventory)
     summary, _ = _identity(root, expected_run_status=expected_run_status)
-    table = _features(root)
-    folds = {fold.name: _fold(root, table, fold) for fold in make_walk_forward_folds()}
+    profile = profile_for_protocol(summary["protocol"])
+    table = _features(root, profile=profile)
+    folds = {
+        fold.name: _fold(root, table, fold, profile=profile) for fold in make_walk_forward_folds()
+    }
     _equal(summary["folds"], folds, "fold summary replay")
-    _equal(summary["comparison"], summarize_phase10(list(folds.values())), "run gates replay")
+    _equal(
+        summary["comparison"],
+        summarize_phase10(list(folds.values()), profile=profile),
+        "run gates replay",
+    )
     return summary
 
 
@@ -680,7 +767,7 @@ def verify_phase10_run(directory: str | Path) -> dict[str, Any]:
         raise Phase10ArtifactError("artifact inventory or digest mismatch")
     summary = _validate(root, actual)
     return {
-        "protocol": PROTOCOL,
+        "protocol": summary["protocol"],
         "run_id": root.name,
         "verified_files": len(actual),
         "completion_version": completion["version"],

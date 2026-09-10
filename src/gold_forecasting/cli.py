@@ -59,8 +59,40 @@ def import_phase10_silver_context(
     years: YearsOption = None,
 ) -> None:
     """Convert local XAGUSD archives into modeled-latency Phase-10 context bundles."""
+    _import_phase10_context(archive_directory, output, source, years, symbol="XAGUSD")
+
+
+@phase10_app.command("dollar-import")
+def import_phase10_dollar_context(
+    archive_directory: Annotated[
+        Path,
+        typer.Option(
+            exists=True,
+            file_okay=False,
+            help="Directory containing annual HISTDATA_COM_ASCII_EURUSD_M1_<year>.zip files.",
+        ),
+    ],
+    output: Annotated[
+        Path,
+        typer.Option(help="New destination for authenticated annual dollar context bundles."),
+    ] = Path("data/context/phase10/dollar"),
+    source: ConfigOption = Path("configs/phase10_dollar_exploratory.yaml"),
+    years: YearsOption = None,
+) -> None:
+    """Import local EURUSD bid closes for the exploratory inverse-EURUSD dollar proxy."""
+    _import_phase10_context(archive_directory, output, source, years, symbol="EURUSD")
+
+
+def _import_phase10_context(
+    archive_directory: Path,
+    output: Path,
+    source: Path,
+    years: str | None,
+    *,
+    symbol: str,
+) -> None:
     from gold_forecasting.phase10.contracts import load_source
-    from gold_forecasting.phase10.silver_histdata import import_histdata_silver_archives
+    from gold_forecasting.phase10.histdata_context import import_histdata_context_archives
 
     selected_years: tuple[int, ...] = (2020, 2021, 2022, 2023, 2024)
     if years is not None:
@@ -68,10 +100,11 @@ def import_phase10_silver_context(
             selected_years = tuple(int(item.strip()) for item in years.split(",") if item.strip())
         except ValueError as exc:
             raise typer.BadParameter("years must be comma-separated integers") from exc
-    result = import_histdata_silver_archives(
+    result = import_histdata_context_archives(
         archive_directory,
         output,
         load_source(source),
+        symbol=symbol,
         years=selected_years,
     )
     typer.echo(json.dumps(result, indent=2))
@@ -119,19 +152,22 @@ def preflight_phase10_context(
     from gold_forecasting.phase10.preflight import inspect_context_source
 
     if config is not None:
+        from gold_forecasting.phase10.config import load_phase10_config
         from gold_forecasting.phase10.real_preflight import run_phase10_preflight
 
         if bundle is not None or source != Path("configs/phase10_silver.yaml"):
             raise typer.BadParameter(
                 "--config uses its own source/bundle; do not mix source options"
             )
+        protocol: str | None = None
         try:
+            protocol = load_phase10_config(config).protocol_version
             result = run_phase10_preflight(config, report_path=report)
         except (OSError, ValueError) as exc:
             typer.echo(
                 json.dumps(
                     {
-                        "protocol": "phase10-silver-modeled-v1",
+                        "protocol": protocol,
                         "status": "blocked",
                         "exploratory_ablation_ready": False,
                         "holdout_opened": False,
@@ -154,7 +190,7 @@ def preflight_phase10_context(
 def run_phase10_silver(
     config: ConfigOption = Path("configs/phase10_silver_ablation.yaml"),
 ) -> None:
-    """Run the exploratory silver ablation only after all local integrity gates pass."""
+    """Run the configured exploratory source ablation after all local integrity gates pass."""
     from gold_forecasting.phase10.pipeline import run_phase10
 
     typer.echo(str(run_phase10(config)))
