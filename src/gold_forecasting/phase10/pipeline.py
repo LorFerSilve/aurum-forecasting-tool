@@ -18,6 +18,13 @@ from gold_forecasting.phase10.training import evaluate_context_fold
 from gold_forecasting.registry import RunRegistry, get_git_code_version
 
 
+def _protocol_path(root: Path, source_id: str) -> Path:
+    """Bind source-specific preregistrations without changing frozen earlier evidence."""
+    if source_id == "rate":
+        return root / "docs/research_protocol_phase10_rate.md"
+    return root / "docs/research_protocol_phase10.md"
+
+
 def run_phase10(config_path: str | Path = "configs/phase10_silver_ablation.yaml") -> Path:
     """A registry run is opened only after every real-data preflight gate passes."""
     path = Path(config_path).resolve(strict=True)
@@ -78,7 +85,7 @@ def run_phase10(config_path: str | Path = "configs/phase10_silver_ablation.yaml"
         write_text_atomic(output / "requirements.lock", (root / "requirements.lock").read_text())
         write_text_atomic(
             output / "protocol.md",
-            (root / "docs/research_protocol_phase10.md").read_text("utf-8"),
+            _protocol_path(root, profile.source_id).read_text("utf-8"),
         )
         for source in sorted((root / "src/gold_forecasting").rglob("*.py")):
             write_text_atomic(
