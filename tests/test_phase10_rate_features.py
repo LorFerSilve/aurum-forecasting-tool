@@ -58,15 +58,30 @@ def test_rate_changes_use_distinct_daily_observations_not_intraday_repetitions()
 def test_rate_history_warmup_and_staleness_route_features_to_missing() -> None:
     frame = _frame()
     result = build_rate_features(frame)
-    assert result.loc[
-        result.rate_observation_id == "dfii10-2020-01-01", "rate_change_1obs_bps"
-    ].isna().all()
-    assert result.loc[
-        result.rate_observation_id == "dfii10-2020-01-05", "rate_change_5obs_bps"
-    ].isna().all()
-    assert result.loc[
-        result.rate_observation_id == "dfii10-2020-01-20", "rate_change_20obs_bps"
-    ].isna().all()
+    assert (
+        result.loc[
+            result.rate_observation_id == "dfii10-2020-01-01",
+            "rate_change_1obs_bps",
+        ]
+        .isna()
+        .all()
+    )
+    assert (
+        result.loc[
+            result.rate_observation_id == "dfii10-2020-01-05",
+            "rate_change_5obs_bps",
+        ]
+        .isna()
+        .all()
+    )
+    assert (
+        result.loc[
+            result.rate_observation_id == "dfii10-2020-01-20",
+            "rate_change_20obs_bps",
+        ]
+        .isna()
+        .all()
+    )
 
     stale = frame.copy()
     stale.loc[stale.rate_observation_id == "dfii10-2020-01-25", "rate_is_stale"] = True
@@ -90,5 +105,5 @@ def test_reappearing_old_rate_observation_fails_closed() -> None:
     frame = _frame(observations=3, repeats=1)
     frame.loc[2, "rate_observation_id"] = frame.loc[0, "rate_observation_id"]
     frame.loc[2, "rate_observed_at_utc"] = frame.loc[0, "rate_observed_at_utc"]
-    with pytest.raises(ValueError, match="increasing unique|must not reappear"):
+    with pytest.raises(ValueError, match=r"increasing unique|must not reappear"):
         build_rate_features(frame)
