@@ -4,7 +4,8 @@ Profiles are code contracts, not configurable model-selection dimensions. The
 dollar observation remains the authentic EURUSD bid close; only its causal
 return direction is inverted in the explicitly registered feature builder.
 The rate profile uses the published DFII10 percentage level and additive yield
-changes rather than treating a yield as a tradable price.
+changes rather than treating a yield as a tradable price. The CPI profile uses
+the BLS CPI-U NSA All items index and only causally released monthly transforms.
 """
 
 from __future__ import annotations
@@ -35,6 +36,10 @@ class ContextProfile:
             from gold_forecasting.phase10.rate_features import RATE_FEATURE_NAMES
 
             return RATE_FEATURE_NAMES
+        if self.source_id == "cpi":
+            from gold_forecasting.phase10.cpi_features import CPI_FEATURE_NAMES
+
+            return CPI_FEATURE_NAMES
         raise ValueError(f"unsupported frozen Phase-10 source: {self.source_id}")
 
     @property
@@ -56,6 +61,10 @@ class ContextProfile:
             from gold_forecasting.phase10.rate_features import build_rate_features
 
             return build_rate_features(frame)
+        if self.source_id == "cpi":
+            from gold_forecasting.phase10.cpi_features import build_cpi_features
+
+            return build_cpi_features(frame)
         raise ValueError(f"unsupported frozen Phase-10 source: {self.source_id}")
 
 
@@ -69,17 +78,23 @@ RATE_PROFILE = ContextProfile(
     "DFII10",
     "10-year TIPS real-yield proxy",
 )
+CPI_PROFILE = ContextProfile(
+    "phase10-cpi-cuur0000sa0-modeled-v1",
+    "cpi",
+    "CUUR0000SA0",
+    "U.S. CPI-U NSA All items",
+)
 
 
 def profile_for_protocol(protocol: str) -> ContextProfile:
-    for profile in (SILVER_PROFILE, DOLLAR_PROFILE, RATE_PROFILE):
+    for profile in (SILVER_PROFILE, DOLLAR_PROFILE, RATE_PROFILE, CPI_PROFILE):
         if profile.protocol == protocol:
             return profile
     raise ValueError(f"unsupported frozen Phase-10 protocol: {protocol}")
 
 
 def profile_for_source(source_id: str) -> ContextProfile:
-    for profile in (SILVER_PROFILE, DOLLAR_PROFILE, RATE_PROFILE):
+    for profile in (SILVER_PROFILE, DOLLAR_PROFILE, RATE_PROFILE, CPI_PROFILE):
         if profile.source_id == source_id:
             return profile
     raise ValueError(f"unsupported frozen Phase-10 source: {source_id}")

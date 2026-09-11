@@ -21,6 +21,7 @@ class Phase10Config(BaseModel):
         "phase10-silver-modeled-v1",
         "phase10-dollar-eurusd-modeled-v1",
         "phase10-rate-dfii10-modeled-v1",
+        "phase10-cpi-cuur0000sa0-modeled-v1",
     ] = "phase10-silver-modeled-v1"
     data_config: str = "phase5.yaml"
     features_config: str = "features_phase7.yaml"
