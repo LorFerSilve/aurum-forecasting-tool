@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "protocol": "phase10-rate-dfii10-modeled-v1",
+  "run_id": "20260911T003632070648Z-c74646e1",
+  "code_version": "c1625179505d0507bc045dee924b8bb13c9334f6",
+  "completion_version": "sha256:9551bc6e9eef8aff67dae972c84a071bdbb35a0275a0c654fc45e846afe129f5",
+  "verified_files": 187,
+  "holdout_opened": false,
+  "champion_promotion": false,
+  "trading_activation": false,
+  "decision": "stop",
+  "evidence_status": "exploratory_no_predictive_admission",
+  "baseline": {
+    "run_id": "20260907T014255645674Z-b2afe281",
+    "completion_version": "sha256:beac58092d06350bb067fbd2df144bb9cb2507f45053c19487474c87d0ceca0f",
+    "variant": "mvp",
+    "family": "logistic"
+  },
+  "aggregate": {
+    "reference": {
+      "accuracy": 0.5952142848396321,
+      "balanced_accuracy": 0.42254241846646007,
+      "macro_f1": 0.4250524337123649,
+      "brier": 0.5790632398366763,
+      "log_loss": 0.9843232179778449,
+      "calibration_error": 0.15282282925221405,
+      "return_mae_bps": 6.0083704208674575
+    },
+    "rate": {
+      "accuracy": 0.5919723688605188,
+      "balanced_accuracy": 0.4205886167398944,
+      "macro_f1": 0.4184984240913603,
+      "brier": 0.5795471700081735,
+      "log_loss": 0.9842194114065101,
+      "calibration_error": 0.14852213006944356,
+      "return_mae_bps": 6.01704013578293
+    },
+    "delta_rate_minus_reference": {
+      "accuracy": -0.0032419159791132746,
+      "balanced_accuracy": -0.0019538017265656737,
+      "macro_f1": -0.006554009621004608,
+      "brier": 0.0004839301714971711,
+      "log_loss": -0.00010380657133479687,
+      "calibration_error": -0.004300699182770484,
+      "return_mae_bps": 0.00866971491547286
+    }
+  },
+  "macro_f1_by_fold": {
+    "test_2022": {
+      "reference": 0.4251015546762434,
+      "rate": 0.41384371487711547,
+      "delta": -0.011257839799127922
+    },
+    "test_2023": {
+      "reference": 0.42358241389195933,
+      "rate": 0.4252185367288846,
+      "delta": 0.001636122836925269
+    },
+    "test_2024": {
+      "reference": 0.4264733325688919,
+      "rate": 0.4164330206680809,
+      "delta": -0.010040311900811005
+    }
+  },
+  "context": {
+    "test_2022": {
+      "usable_fraction": 0.8481382331467511,
+      "fallback_fraction": 0.15186176685324895
+    },
+    "test_2023": {
+      "usable_fraction": 0.7300310641269535,
+      "fallback_fraction": 0.26996893587304643
+    },
+    "test_2024": {
+      "usable_fraction": 0.8603035158148662,
+      "fallback_fraction": 0.13969648418513383
+    }
+  },
+  "predictive_gate_passed": false,
+  "economic_gate_passed": false,
+  "next_source": "us_cpi"
+}
