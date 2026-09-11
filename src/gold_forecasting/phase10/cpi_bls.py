@@ -221,7 +221,10 @@ def parse_bls_cpi_file(
     ):
         raise CpiBlsError("CUUR0000SA0 values must be finite positive index levels <= 1000")
 
-    development = development.assign(reference_month=keys.to_numpy(), numeric_value=values.to_numpy())
+    development = development.assign(
+        reference_month=keys.to_numpy(),
+        numeric_value=values.to_numpy(),
+    )
     selected = development.loc[development["reference_month"].isin(CPI_RELEASE_DATES)].copy()
     selected = selected.sort_values("reference_month").reset_index(drop=True)
     if selected["reference_month"].tolist() != sorted(CPI_RELEASE_DATES):
