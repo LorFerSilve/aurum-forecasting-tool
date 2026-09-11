@@ -213,7 +213,9 @@ def parse_bls_cpi_file(
     try:
         values = pd.to_numeric(development["value"], errors="raise").astype("float64")
     except (TypeError, ValueError) as exc:
-        raise CpiBlsError("CUUR0000SA0 values must be numeric") from exc
+        raise CpiBlsError(
+            "CUUR0000SA0 values must be numeric, finite positive index levels <= 1000"
+        ) from exc
     if (
         not np.isfinite(values.to_numpy()).all()
         or values.le(0.0).any()
