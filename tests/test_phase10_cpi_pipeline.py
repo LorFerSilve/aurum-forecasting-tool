@@ -210,7 +210,9 @@ def test_cpi_nested_folds_train_only_and_exact_fallback(tmp_path: Path, year: in
     fitted = joblib.load(tmp_path / "final_model.joblib")
     assert fitted.preprocessor.train_sample_digest == sample_id_digest(supported.sample_id)
     assert fitted.preprocessor.train_row_count == len(supported) < len(train)
-    assert set(fitted.preprocessor.feature_names) == set(PRICE_NAMES) | set(CPI_PROFILE.model_features)
+    assert set(fitted.preprocessor.feature_names) == set(PRICE_NAMES) | set(
+        CPI_PROFILE.model_features
+    )
 
 
 def test_cpi_outer_and_calibration_cannot_change_selection(tmp_path: Path) -> None:
