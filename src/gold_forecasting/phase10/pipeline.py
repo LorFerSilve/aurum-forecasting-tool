@@ -20,8 +20,8 @@ from gold_forecasting.registry import RunRegistry, get_git_code_version
 
 def _protocol_path(root: Path, source_id: str) -> Path:
     """Bind source-specific preregistrations without changing frozen earlier evidence."""
-    if source_id == "rate":
-        return root / "docs/research_protocol_phase10_rate.md"
+    if source_id in {"rate", "cpi"}:
+        return root / f"docs/research_protocol_phase10_{source_id}.md"
     return root / "docs/research_protocol_phase10.md"
 
 
@@ -160,15 +160,13 @@ def run_phase10(config_path: str | Path = "configs/phase10_silver_ablation.yaml"
                 f"# Phase 10 exploratory {profile.title} ablation\n\n"
                 f"Protocol: `{config.protocol_version}`.\n\n"
                 f"Decision: `{summary['comparison']['decision']}`.\n\n"
-                "Modeled latency is an assumption, not historical release evidence. "
+                "Modeled latency is an assumption, not historical value-vintage evidence. "
                 "The frozen Phase-7 15m mvp/logistic champion is retained. "
                 "No promotion or trading activation; the 2025+ holdout remains closed.\n"
             ),
         )
         if get_git_code_version(root) != record.code_version:
             raise ValueError("Git identity changed during Phase-10 evaluation")
-        # Seal while the registry still says "running".  The completion inventory
-        # deliberately excludes run.json, whose terminal status is written next.
         complete_phase10_run(output)
     except Exception as exc:
         registry.finish_run(record, status="failed", error=f"{type(exc).__name__}: {exc}")

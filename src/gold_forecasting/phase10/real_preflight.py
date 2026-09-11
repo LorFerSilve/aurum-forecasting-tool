@@ -35,8 +35,19 @@ from gold_forecasting.phase10.contracts import (
     load_source,
     validate_observations,
 )
+from gold_forecasting.phase10.cpi_bls import (
+    BLS_CPI_FILENAME,
+    BLS_CPI_RELEASE_TIME,
+    BLS_CPI_SCHEDULE_URLS,
+    BLS_CPI_SERIES,
+    BLS_CPI_SERIES_URL,
+    BLS_CPI_SOURCE_URL,
+    CPI_RELEASE_DATES,
+    parse_bls_cpi_file,
+)
 from gold_forecasting.phase10.point_in_time import context_coverage, join_context
 from gold_forecasting.phase10.profiles import (
+    CPI_PROFILE,
     RATE_PROFILE,
     SILVER_PROFILE,
     ContextProfile,
@@ -58,6 +69,7 @@ from gold_forecasting.registry import get_git_code_version
 
 SILVER_MODEL_FEATURES = SILVER_PROFILE.model_features
 RATE_MODEL_FEATURES = RATE_PROFILE.model_features
+CPI_MODEL_FEATURES = CPI_PROFILE.model_features
 _YEARS = (2020, 2021, 2022, 2023, 2024)
 _MAX_METADATA = 1024 * 1024
 
@@ -123,6 +135,18 @@ def validate_modeled_context_source(source: ContextSource, profile: ContextProfi
             "missing_policy": "price_only_fallback",
             "source_timezone": "America/New_York release schedule; DST-aware",
             "source_url": FRED_RATE_SOURCE_URL,
+        }
+    elif profile.source_id == "cpi":
+        expected = {
+            "source_id": "cpi",
+            "enabled": True,
+            "availability_basis": "modeled_latency",
+            "publication_delay_seconds": 0,
+            "stale_after_seconds": 7776000,
+            "revision_policy": "append_only",
+            "missing_policy": "price_only_fallback",
+            "source_timezone": "America/New_York release schedule; DST-aware",
+            "source_url": BLS_CPI_SOURCE_URL,
         }
     else:
         raise Phase10PreflightError(f"unsupported modeled Phase-10 source: {profile.source_id}")
@@ -369,6 +393,122 @@ def _inspect_rate_metadata(
     }
 
 
+def _inspect_cpi_metadata(
+    root: Path,
+    config: Phase10Config,
+    source: ContextSource,
+) -> dict[str, Any]:
+    root = root.resolve()
+    set_path = _unredirected(root / config.bundle_path, root)
+    raw_root = _unredirected(root / config.archive_directory, root)
+    bundle_set, set_hash = _json_metadata(set_path)
+    manifest = ContextBundleSetManifest.model_validate_json(json.dumps(bundle_set))
+    expected_names = tuple(f"cpi-{year}.manifest.json" for year in _YEARS)
+    if (
+        manifest.source_id != "cpi"
+        or manifest.availability_basis != "modeled_latency"
+        or manifest.bundles != expected_names
+    ):
+        raise Phase10PreflightError("CPI bundle-set must contain exactly annual 2020-2024 bundles")
+    artifacts_path = _unredirected(set_path.parent / "source_artifacts.json", root)
+    provenance, provenance_hash = _json_metadata(artifacts_path)
+    expected_top = {
+        "schema_version": 1,
+        "source_id": "cpi",
+        "series_id": BLS_CPI_SERIES,
+        "availability_basis": "modeled_latency",
+        "availability_is_historical_evidence": False,
+        "years": list(_YEARS),
+    }
+    if any(
+        provenance.get(key) != value or type(provenance.get(key)) is not type(value)
+        for key, value in expected_top.items()
+    ):
+        raise Phase10PreflightError("CPI source metadata exposes unexpected source/year")
+    record = provenance.get("source_file")
+    if not isinstance(record, dict):
+        raise Phase10PreflightError("CPI metadata requires one authenticated source_file record")
+    schedule_hash = hashlib.sha256(
+        json.dumps(CPI_RELEASE_DATES, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+    expected_record = {
+        "filename": BLS_CPI_FILENAME,
+        "series_id": BLS_CPI_SERIES,
+        "series_definition_url": BLS_CPI_SERIES_URL,
+        "source_url": BLS_CPI_SOURCE_URL,
+        "availability_basis": "modeled_latency",
+        "availability_is_historical_evidence": False,
+        "reference_time_semantics": "reference_month_first_day_00:00_UTC",
+        "release_schedule": BLS_CPI_RELEASE_TIME,
+        "release_rule": "frozen_official_bls_2020_2024_calendar_dates",
+        "schedule_urls": list(BLS_CPI_SCHEDULE_URLS),
+        "schedule_sha256": schedule_hash,
+        "revision_snapshot": "latest_bls_flat_file_no_historical_value_vintages",
+        "development_month_rows": 60,
+        "excluded_after_development_release": 1,
+        "rows": 59,
+        "first_reference_month": "2020-01",
+        "last_reference_month": "2024-11",
+    }
+    for key, value in expected_record.items():
+        if record.get(key) != value or type(record.get(key)) is not type(value):
+            raise Phase10PreflightError(f"CPI source metadata differs from frozen contract: {key}")
+    for key in ("size_bytes", "raw_rows", "series_rows"):
+        if type(record.get(key)) is not int or record[key] <= 0:
+            raise Phase10PreflightError(f"CPI source metadata requires positive integer {key}")
+    digest = record.get("sha256")
+    if (
+        not isinstance(digest, str)
+        or len(digest) != 64
+        or any(character not in "0123456789abcdef" for character in digest)
+    ):
+        raise Phase10PreflightError("CPI source SHA-256 is invalid")
+    raw_path = _unredirected(raw_root / BLS_CPI_FILENAME, root)
+    if Path(str(record.get("path"))).absolute() != raw_path:
+        raise Phase10PreflightError("CPI source path differs from configured source file")
+    if not raw_path.is_file():
+        raise Phase10PreflightError(f"required local BLS CPI source is missing: {raw_path}")
+    expected_year_rows = {"2020": 12, "2021": 12, "2022": 12, "2023": 12, "2024": 11}
+    if record.get("year_rows") != expected_year_rows:
+        raise Phase10PreflightError("CPI metadata requires exact annual row counts 12/12/12/12/11")
+
+    bundles: list[dict[str, Any]] = []
+    for year, name in zip(_YEARS, expected_names, strict=True):
+        partition_path = _unredirected(set_path.parent / name, root)
+        partition, partition_hash = _json_metadata(partition_path)
+        item = ContextBundleManifest.model_validate(partition)
+        start = pd.Timestamp(item.observation_start_utc)
+        end = pd.Timestamp(item.observation_end_utc)
+        if not DEVELOPMENT_START <= start < end <= DEVELOPMENT_END:
+            raise Phase10PreflightError("CPI bundle span must remain in development 2020-2024")
+        if (
+            item.source_id != "cpi"
+            or item.availability_basis != "modeled_latency"
+            or item.format != "parquet"
+            or item.file != f"cpi-{year}.parquet"
+            or item.row_count != expected_year_rows[str(year)]
+        ):
+            raise Phase10PreflightError("CPI annual bundle identity/rows differ from provenance")
+        _unredirected(set_path.parent / item.file, root)
+        bundles.append(
+            {
+                "year": year,
+                "manifest_path": str(partition_path),
+                "manifest_sha256": partition_hash,
+                "data_file": item.file,
+                "data_sha256": item.sha256,
+            }
+        )
+    return {
+        "bundle_set": str(set_path),
+        "bundle_set_sha256": set_hash,
+        "source_artifacts": str(artifacts_path),
+        "source_artifacts_sha256": provenance_hash,
+        "source_file": record,
+        "bundles": bundles,
+    }
+
+
 def inspect_context_metadata(
     root: Path,
     config: Phase10Config,
@@ -379,6 +519,8 @@ def inspect_context_metadata(
     validate_modeled_context_source(source, profile)
     if profile.source_id == "rate":
         return _inspect_rate_metadata(root, config, source)
+    if profile.source_id == "cpi":
+        return _inspect_cpi_metadata(root, config, source)
     return _inspect_histdata_metadata(root, config, source)
 
 
@@ -411,6 +553,33 @@ def _load_verified_rate(
     return validate_observations(pd.concat(frames, ignore_index=True), source)
 
 
+def _load_verified_cpi(
+    source: ContextSource,
+    evidence: dict[str, Any],
+) -> pd.DataFrame:
+    record = evidence["source_file"]
+    reparsed, actual = parse_bls_cpi_file(
+        record["path"],
+        source=source,
+        ingested_at_utc=pd.Timestamp(record["ingested_at_utc"]),
+    )
+    if json.dumps(actual, sort_keys=True) != json.dumps(record, sort_keys=True):
+        raise Phase10PreflightError("CPI source hash/metadata differs from original bytes")
+    frames: list[pd.DataFrame] = []
+    for bundle in evidence["bundles"]:
+        year = bundle["year"]
+        expected = reparsed.loc[reparsed["observed_at_utc"].dt.year.eq(year)].reset_index(drop=True)
+        loaded = load_context_bundle(bundle["manifest_path"], source)
+        try:
+            pd.testing.assert_frame_equal(loaded, expected, check_exact=True)
+        except AssertionError as exc:
+            raise Phase10PreflightError(
+                "CPI bundle observations differ from authenticated BLS source file"
+            ) from exc
+        frames.append(loaded)
+    return validate_observations(pd.concat(frames, ignore_index=True), source)
+
+
 def load_verified_context(
     root: Path,
     config: Phase10Config,
@@ -425,6 +594,8 @@ def load_verified_context(
         raise Phase10PreflightError("context metadata changed after the metadata-only guard")
     if profile.source_id == "rate":
         result = _load_verified_rate(root, config, source, evidence)
+    elif profile.source_id == "cpi":
+        result = _load_verified_cpi(source, evidence)
     else:
         frames: list[pd.DataFrame] = []
         for bundle in evidence["bundles"]:
@@ -677,6 +848,7 @@ def run_phase10_preflight(
 
 
 __all__ = [
+    "CPI_MODEL_FEATURES",
     "RATE_MODEL_FEATURES",
     "SILVER_MODEL_FEATURES",
     "Phase10PreflightError",
