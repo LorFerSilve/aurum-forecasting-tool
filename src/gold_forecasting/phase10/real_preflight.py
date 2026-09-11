@@ -301,7 +301,7 @@ def _inspect_rate_metadata(
         "release_schedule": "16:15 America/New_York",
         "release_rule": "next_us_federal_business_day_16:15_America/New_York",
         "revision_snapshot": "latest_downloaded_history_no_vintages",
-        "first_reference_date": "2020-01-01",
+        "first_reference_date": "2020-01-02",
         "last_reference_date": "2024-12-31",
     }
     for key, value in expected_record.items():

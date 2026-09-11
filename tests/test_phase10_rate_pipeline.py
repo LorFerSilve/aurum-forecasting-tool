@@ -126,7 +126,6 @@ def _fred_fixture(root: Path) -> tuple[object, object]:
     raw = root / config.archive_directory
     raw.mkdir(parents=True)
     rows = [
-        ("2020-01-01", "."),
         ("2020-01-02", "0.10"),
         ("2021-01-04", "0.20"),
         ("2022-01-03", "0.30"),
