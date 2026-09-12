@@ -11,6 +11,7 @@ import hashlib
 import math
 import os
 import tempfile
+from contextlib import suppress
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Final
@@ -124,10 +125,8 @@ def _persist_atomic(destination: Path, payload: bytes, *, overwrite: bool) -> No
         if descriptor >= 0:
             os.close(descriptor)
         if temporary is not None:
-            try:
+            with suppress(OSError):
                 temporary.unlink(missing_ok=True)
-            except OSError:
-                pass
 
 
 def download_bls_cpi(
@@ -149,26 +148,33 @@ def download_bls_cpi(
     path = _prepare_destination(destination, overwrite=overwrite)
     payload = bytearray()
     try:
-        with httpx.Client(
-            follow_redirects=False,
-            headers={"User-Agent": _USER_AGENT},
-            timeout=timeout_seconds,
-            transport=transport,
-        ) as client:
-            with client.stream("GET", BLS_CPI_SOURCE_URL) as response:
-                if response.status_code != httpx.codes.OK:
+        with (
+            httpx.Client(
+                follow_redirects=False,
+                headers={"User-Agent": _USER_AGENT},
+                timeout=timeout_seconds,
+                transport=transport,
+            ) as client,
+            client.stream("GET", BLS_CPI_SOURCE_URL) as response,
+        ):
+            if response.status_code != httpx.codes.OK:
+                raise CpiAcquisitionError(
+                    f"BLS CPI download returned HTTP {response.status_code}; "
+                    "redirects are rejected"
+                )
+            if str(response.url) != BLS_CPI_SOURCE_URL:
+                raise CpiAcquisitionError(
+                    "BLS CPI response URL differs from the frozen source URL"
+                )
+            _validate_content_length(response.headers)
+            for chunk in response.iter_bytes():
+                if not chunk:
+                    continue
+                if len(payload) + len(chunk) > MAX_BLS_CPI_SOURCE_BYTES:
                     raise CpiAcquisitionError(
-                        f"BLS CPI download returned HTTP {response.status_code}; redirects are rejected"
+                        "BLS CPI download exceeds the configured size limit"
                     )
-                if str(response.url) != BLS_CPI_SOURCE_URL:
-                    raise CpiAcquisitionError("BLS CPI response URL differs from the frozen source URL")
-                _validate_content_length(response.headers)
-                for chunk in response.iter_bytes():
-                    if not chunk:
-                        continue
-                    if len(payload) + len(chunk) > MAX_BLS_CPI_SOURCE_BYTES:
-                        raise CpiAcquisitionError("BLS CPI download exceeds the configured size limit")
-                    payload.extend(chunk)
+                payload.extend(chunk)
     except CpiAcquisitionError:
         raise
     except httpx.HTTPError as exc:
@@ -190,7 +196,7 @@ def download_bls_cpi(
 
 
 __all__ = [
-    "CpiAcquisitionError",
     "MAX_BLS_CPI_SOURCE_BYTES",
+    "CpiAcquisitionError",
     "download_bls_cpi",
 ]

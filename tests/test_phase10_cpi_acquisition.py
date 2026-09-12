@@ -11,8 +11,8 @@ import pytest
 
 from gold_forecasting.phase10.contracts import ContextSource, load_source
 from gold_forecasting.phase10.cpi_acquisition import (
-    CpiAcquisitionError,
     MAX_BLS_CPI_SOURCE_BYTES,
+    CpiAcquisitionError,
     download_bls_cpi,
 )
 from gold_forecasting.phase10.cpi_bls import (
