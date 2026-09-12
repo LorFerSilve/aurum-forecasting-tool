@@ -1,0 +1,16 @@
+source_id: silver
+description: HistData XAGUSD M1 exploratory source with modeled historical availability
+source_url: https://www.histdata.com/f-a-q/data-files-detailed-specification/
+market_hours: OTC vendor quote stream; gaps and market closures stay missing/stale
+source_timezone: Fixed UTC-05:00 without daylight saving time
+publication_delay_seconds: 60
+stale_after_seconds: 600
+availability_basis: modeled_latency
+revision_policy: append_only
+availability_evidence: >-
+  Exploratory only. HistData does not provide historical per-row release timestamps.
+  The project interprets M1 timestamps as candle opens and models availability as
+  candle close plus 60 seconds. Current project ingestion time is stored separately
+  and does not prove historical availability.
+missing_policy: price_only_fallback
+enabled: true

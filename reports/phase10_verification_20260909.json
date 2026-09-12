@@ -1,0 +1,103 @@
+{
+  "absent_source_fallback_rows": 178,
+  "branch": "codex/phase10-external-context",
+  "champion_changed": false,
+  "code_version": "9a15e04ecd3c3d5dedec08e009b083c56a840a44+dirty",
+  "completion": {
+    "path": "reports/phase10_dry_run_20260909/completion.json",
+    "sha256": "5f672eaeb5514e5b0906e5b55268f9f5cad26508c448055a13c82e7a745dc51f",
+    "size_bytes": 1334
+  },
+  "formal_benchmark": false,
+  "holdout_opened": false,
+  "implementation_files": [
+    {
+      "path": "src/gold_forecasting/phase10/__init__.py",
+      "sha256": "6845ca42172b21efa14a8d10a2fd275fc4966132277e46489269ab358b1f30bd",
+      "size_bytes": 81
+    },
+    {
+      "path": "src/gold_forecasting/phase10/bundle.py",
+      "sha256": "3fadaae93e7be07adffe15b944b0536a5e30a6a22b01db741d74c3e98135d331",
+      "size_bytes": 6154
+    },
+    {
+      "path": "src/gold_forecasting/phase10/contracts.py",
+      "sha256": "317aa3652a00c0881ebb017d4c5d22b416133525ddc4d0ca261f11044392d239",
+      "size_bytes": 5865
+    },
+    {
+      "path": "src/gold_forecasting/phase10/dry_run.py",
+      "sha256": "37d04e3dad9cd1ff056ae0f6793042d1c3dd324a37bbc092a6f74744037f035e",
+      "size_bytes": 13286
+    },
+    {
+      "path": "src/gold_forecasting/phase10/events.py",
+      "sha256": "ae562351f3739c66cd39287bae0e4a39124b3b0c742d85be948b99031bcb1961",
+      "size_bytes": 9388
+    },
+    {
+      "path": "src/gold_forecasting/phase10/features.py",
+      "sha256": "b976df046720c0f2da0cadc04ebe5d412477aec760e330e38e811ff828ee91e2",
+      "size_bytes": 6293
+    },
+    {
+      "path": "src/gold_forecasting/phase10/point_in_time.py",
+      "sha256": "d915f24eaff9d8f25da11ce0021f54d2c55685ddb1e7914e52c0fbe65527da8d",
+      "size_bytes": 4241
+    },
+    {
+      "path": "src/gold_forecasting/phase10/preflight.py",
+      "sha256": "294b70b868fc7e7ca59b70b65f346f7a37e71bab52de83306558db067d7fd420",
+      "size_bytes": 1589
+    },
+    {
+      "path": "src/gold_forecasting/cli.py",
+      "sha256": "d0a90a2ef7fd42d452372a4b2f06a5ab33051de370cc6b7240253427311a315d",
+      "size_bytes": 15185
+    },
+    {
+      "path": "configs/phase10_silver.yaml",
+      "sha256": "f0d6b4eaf4cba448f3922c26c6ae978b173c670b1b3174c7f3e1c3de9a3d0ce6",
+      "size_bytes": 819
+    }
+  ],
+  "outage_fallback_rows": 55,
+  "phase10_status": "technical_foundation_verified_real_data_benchmark_pending",
+  "schema_version": 1,
+  "source_preflight": {
+    "availability_basis": "modeled_latency",
+    "blockers": [
+      "source_disabled",
+      "historical_release_evidence_unproven",
+      "no_observation_bundle"
+    ],
+    "bundle_loaded": false,
+    "champion_changed": false,
+    "enabled": false,
+    "fallback": "price_only_fallback",
+    "formal_benchmark_ready": false,
+    "holdout_opened": false,
+    "observation_rows": null,
+    "remaining_gate": "source evidence review and frozen common-fold ablation protocol",
+    "source_id": "silver",
+    "status": "blocked"
+  },
+  "synthetic_only": true,
+  "synthetic_rows": 895,
+  "synthetic_run_directory": "reports/phase10_dry_run_20260909",
+  "test_rows_per_variant": 178,
+  "trading_enabled": false,
+  "validation": {
+    "mypy": "passed (88 source files)",
+    "package_build": "sdist and wheel passed",
+    "pip_check": "passed",
+    "pytest_passed": 804,
+    "pytest_seconds": 90.98,
+    "pytest_skipped": 1,
+    "ruff": "passed",
+    "skip_reason": "Windows host does not permit creating a symlink"
+  },
+  "verified_artifact_files": 8,
+  "verified_at_utc": "2026-09-09T02:46:52.867218+00:00"
+}

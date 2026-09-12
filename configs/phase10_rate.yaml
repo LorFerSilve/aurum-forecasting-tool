@@ -1,0 +1,15 @@
+source_id: rate
+description: Strict-PIT placeholder for a future 10-year TIPS real-yield source
+source_url: https://fred.stlouisfed.org/series/DFII10
+market_hours: H.15 daily release; strict historical release/vintage evidence required
+source_timezone: America/New_York release schedule; DST-aware
+publication_delay_seconds: 0
+stale_after_seconds: 432000
+availability_basis: provider_timestamp
+revision_policy: vintages
+availability_evidence: >-
+  Disabled strict source. A current FRED/H.15 download and the published release schedule do not
+  prove the exact historical value/version available at every prediction cutoff. Enable only after
+  a separate historical vintage/release archive has been authenticated.
+missing_policy: price_only_fallback
+enabled: false

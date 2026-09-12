@@ -364,7 +364,8 @@ def evaluate_fold(
     return summary
 
 
-def aggregate_horizon(folds: list[dict[str, Any]]) -> dict[str, Any]:
+def aggregate_model_metrics(folds: list[dict[str, Any]]) -> dict[str, Any]:
+    """Shared equal-weight mean/median/worst metrics for any fixed model comparison."""
     metrics = {
         "accuracy": ("classification", "accuracy", True),
         "balanced_accuracy": ("classification", "balanced_accuracy", True),
@@ -392,6 +393,11 @@ def aggregate_horizon(folds: list[dict[str, Any]]) -> dict[str, Any]:
                 "folds": values,
             }
         results[family] = summaries
+    return results
+
+
+def aggregate_horizon(folds: list[dict[str, Any]]) -> dict[str, Any]:
+    results = aggregate_model_metrics(folds)
     reference = results["reference"]
     eligible = []
     for family in ("logistic", "ridge", "xgboost"):

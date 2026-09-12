@@ -1,0 +1,17 @@
+source_id: cpi
+description: BLS CPI-U All items NSA monthly observations for the Phase-10 CPI hypothesis
+source_url: https://download.bls.gov/pub/time.series/cu/cu.data.1.AllItems
+market_hours: CPI monthly release at the frozen official BLS 2020-2024 calendar timestamps
+source_timezone: America/New_York release schedule; DST-aware
+publication_delay_seconds: 0
+stale_after_seconds: 7776000
+availability_basis: modeled_latency
+revision_policy: append_only
+availability_evidence: >-
+  Exploratory only. Series CUUR0000SA0 is the BLS CPI-U All items index for U.S. city average,
+  all urban consumers, not seasonally adjusted. Historical CPI release dates are frozen from the
+  official BLS 2020-2024 release calendars at 08:30 America/New_York. The downloaded BLS
+  time-series flat file is a current snapshot and does not preserve the value vintage visible at
+  each historical cutoff, so these release timestamps are modeled point-in-time evidence only.
+missing_policy: price_only_fallback
+enabled: true

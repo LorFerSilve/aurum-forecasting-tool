@@ -1,0 +1,16 @@
+source_id: cpi
+description: Strict-PIT placeholder for BLS CPI-U All items historical release/vintage evidence
+source_url: https://download.bls.gov/pub/time.series/cu/cu.data.1.AllItems
+market_hours: CPI monthly release; strict historical value/version evidence required
+source_timezone: America/New_York release schedule; DST-aware
+publication_delay_seconds: 0
+stale_after_seconds: 7776000
+availability_basis: provider_timestamp
+revision_policy: vintages
+availability_evidence: >-
+  Disabled strict source. Official BLS calendars authenticate historical release dates, but the
+  current BLS time-series flat file is a latest snapshot and does not establish which value/version
+  was visible at every historical prediction cutoff. Enable only after historical release/vintage
+  artifacts are independently authenticated.
+missing_policy: price_only_fallback
+enabled: false

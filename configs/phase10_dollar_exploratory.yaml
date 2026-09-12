@@ -1,0 +1,17 @@
+source_id: dollar
+description: HistData EURUSD bid-close observations for the inverse-EURUSD dollar-direction hypothesis
+source_url: https://www.histdata.com/f-a-q/data-files-detailed-specification/
+market_hours: OTC vendor quote stream; gaps and market closures stay missing/stale
+source_timezone: Fixed UTC-05:00 without daylight saving time
+publication_delay_seconds: 60
+stale_after_seconds: 600
+availability_basis: modeled_latency
+revision_policy: append_only
+availability_evidence: >-
+  Exploratory only. HistData does not provide historical per-row release timestamps.
+  M1 timestamps are candle opens; availability is modeled as candle close plus 60s.
+  EURUSD bid_close remains the raw observation. Its inverse log-return direction
+  is a bilateral USD-strength proxy, not DXY or an executable inverse bid quote.
+  Current project ingestion time does not prove historical availability.
+missing_policy: price_only_fallback
+enabled: true

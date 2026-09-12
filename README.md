@@ -184,6 +184,47 @@ De volledige run schrijft:
 - base- en stressbacktests met beslissingen en trades;
 - één voorbeeldvoorspelling en een atomisch runmanifest.
 
+### Fase 10 — externe context (in ontwikkeling)
+
+Phase 10 heeft nu zowel de generieke point-in-time contextlaag als de eerste
+real-data silver-ablationketen. XAGUSD wordt via een afzonderlijke HistData-adapter
+als jaarlijkse geauthenticeerde Parquetpartities geladen; de frozen XAUUSD-ingestie
+blijft ongewijzigd. Backward as-of joins, stale/missing routing, causal silverfeatures
+en exacte Phase-7 price-only fallback zijn afgedwongen.
+
+De real-data silver runner gebruikt uitsluitend de frozen Phase-7 15m
+`mvp/logistic` champion als baseline, exact dezelfde 2022/2023/2024 folds en
+181-minuten gap, en dezelfde drie logistic `C`-waarden met balanced class weighting.
+De volledige gold sample-ID/value parity wordt vóór training bewezen.
+
+```powershell
+\.\.venv\Scripts\gold-forecast.exe phase10 silver-import --archive-directory <XAGUSD-map> --output data/context/phase10/silver --source configs/phase10_silver_exploratory.yaml
+\.\.venv\Scripts\gold-forecast.exe phase10 preflight --config configs/phase10_silver_ablation.yaml --report reports/phase10_preflight.json
+\.\.venv\Scripts\gold-forecast.exe phase10 run --config configs/phase10_silver_ablation.yaml
+\.\.venv\Scripts\gold-forecast.exe phase10 validate reports/phase10_runs/<run-id>
+```
+
+HistData levert geen historische per-row release timestamps. Daarom blijft
+`available_at = candle close + 60s` expliciet **modeled latency**. De run is uitsluitend
+exploratory: hij kan nooit de champion wijzigen of trading activeren. Een positief resultaat
+kan alleen de beslissing `seek_strict_source` rechtvaardigen. De 2025+ holdout blijft
+gesloten.
+
+De real-data XAGUSD run `20260909T133304370198Z-be3c4015` is afgerond en volledig
+gevalideerd (181 bestanden). Silver verbeterde probability scores maar verslechterde
+macro-F1 in alle drie outer folds; predictive en economic admission faalden. De
+beslissing is daarom `stop` en de Phase-7 15m champion blijft behouden. Zie
+[het Phase-10 protocol](docs/research_protocol_phase10.md) en
+[de implementatiestatus](docs/phase10_implementation.md).
+
+De volgende bronhypothese is een expliciet benoemde inverse EURUSD-dollarproxy
+(`phase10-dollar-eurusd-modeled-v1`). De generieke import-, point-in-time-, feature-,
+nested-logistic-, fallback- en artifactketen is aanwezig, maar de benchmark blijft
+gesloten totdat de gebruiker de vijf lokale EURUSD M1 ZIPs onder
+`data/raw/phase10/dollar/` plaatst. DXY wordt niet stilzwijgend vervangen door deze
+bilaterale proxy; de bronkeuze en beperkingen staan in
+[het dollarbrononderzoek](docs/phase10_dollar_source_research.md).
+
 ## Kwaliteitscontroles
 
 ```powershell

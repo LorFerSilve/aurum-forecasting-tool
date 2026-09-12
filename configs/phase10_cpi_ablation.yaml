@@ -1,0 +1,14 @@
+schema_version: 1
+protocol_version: phase10-cpi-cuur0000sa0-modeled-v1
+data_config: phase5.yaml
+features_config: features_phase7.yaml
+source_config: phase10_cpi_exploratory.yaml
+phase7_champion_config: phase7_champion.yaml
+bundle_path: data/context/phase10/cpi/cpi.bundle-set.json
+archive_directory: data/raw/phase10/cpi
+output_directory: reports/phase10_cpi_runs
+test_years: [2022, 2023, 2024]
+horizon_minutes: 15
+gap_minutes: 181
+seed: 20260906
+minimum_policy_trades: 20
